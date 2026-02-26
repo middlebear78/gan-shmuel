@@ -1,12 +1,17 @@
-from flask import Flask,request,jsonify
 
+from flask import Flask,request,jsonify
 app=Flask(__name__)
 providers = {}#MOCK
+import os
+
+app=Flask(__name__)
 # ____________________________________________________________
-# app routes/views
+# all routes
+
+# health check
 @app.route("/health")
 def health():
-    return "ok",200
+     return {"status": "UP"},200
 
 @app.route("/provider",methods=["POST"])
 def new_provider():
@@ -21,8 +26,6 @@ def new_provider():
     providers[provider_id]=provider_name
     return jsonify({"id":provider_id}),201
     
-    
-
 # ____________________________________________________________
 # named as __main__
 if __name__=="__main__":
