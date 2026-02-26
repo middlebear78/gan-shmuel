@@ -1,9 +1,5 @@
 from flask import Flask
-from views import *
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app=Flask(__name__)
 # ____________________________________________________________
