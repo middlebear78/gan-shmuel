@@ -2,14 +2,22 @@
 from flask import Flask, request, jsonify
 import os
 import mysql.connector
+from models import Provider,db,Truck, Rate
 from dotenv import load_dotenv
 
-
+load_dotenv()
 app=Flask(__name__)
-providers = {}#MOCK
 
+db_user = os.getenv("DB_USER", "root")
+db_pass = os.getenv("DB_PASSWORD", "rootpass")
+db_host = os.getenv("DB_HOST", "127.0.0.1")
+db_port = os.getenv("DB_PORT", "3306")
+db_name = os.getenv("DB_NAME", "billdb")
 
-app=Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
 # ____________________________________________________________
 # all routes
 
@@ -20,19 +28,19 @@ def health():
 
 @app.route("/provider",methods=["POST"])
 def new_provider():
-    data=request.get_json()
-    provider_name = data.get("name")
-    provider_id = next((key for key, name in providers.items() if name == provider_name), None)
+    data = request.get_json()
+    provider_name = data.get('name')
     if not provider_name:
         return jsonify({"error": "Provider name is required"}), 400
-    if provider_id!=None:
+    if Provider.query.filter_by(name=provider_name).first()!=None:
         return jsonify({"message":f"Provider '{provider_name}' is already exist"}),400
-    provider_id=len(providers)+1+10000#starting number is 10000
-    providers[provider_id]=provider_name
-    return jsonify({"id":provider_id}),201
+    new_provider = Provider(name=provider_name)
+    db.session.add(new_provider)
+    db.session.commit()
+    return jsonify({"id": str(new_provider.id)}), 201
     
 
-load_dotenv()
+
 
 def get_db_conn():
     return mysql.connector.connect(
