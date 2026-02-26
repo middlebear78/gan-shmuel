@@ -1,14 +1,7 @@
 from flask import Flask
+from views import *
 
 app=Flask(__name__)
-
-# ____________________________________________________________
-# app routes/views
-@app.route("/health")
-def health():
-    return "ok",200
-
-
 
 # ____________________________________________________________
 # named as __main__
