@@ -25,7 +25,13 @@ db.init_app(app)
 # health check
 @app.route("/health")
 def health():
-     return {"status": "UP"},200
+    try:
+        # run lightweight DB check
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "OK",}), 200
+
+    except Exception as e:
+        return jsonify({"status": "Failure", "error": str(e)}), 500
 
 @app.route("/provider",methods=["POST"])
 def new_provider():
