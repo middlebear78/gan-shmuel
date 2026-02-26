@@ -1,7 +1,7 @@
 services:
   db:
     build:
-      dockerfile: Dockerfile.mysql-dev
+      dockerfile: Dockerfile.mysql.dev
     environment:
       - MYSQL_DATABASE=${WEIGHT_DATABASE}
       - MYSQL_ROOT_PASSWORD=${WEIGHT_ROOT_PASSWORD}
@@ -18,7 +18,7 @@ services:
 
   app:
     build:
-      dockerfile: Dockerfile.weight-dev
+      dockerfile: Dockerfile.weight.dev
     environment:
       - DB_HOSTNAME=db
       - DB_PASSWORD=${WEIGHT_ROOT_PASSWORD}
