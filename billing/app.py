@@ -1,5 +1,9 @@
 from flask import Flask
 from views import *
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app=Flask(__name__)
 # ____________________________________________________________
@@ -8,7 +12,7 @@ app=Flask(__name__)
 # health check
 @app.route("/health")
 def health():
-    return "ok",200
+    return {"status": "UP"},200
 
 
 # ____________________________________________________________
