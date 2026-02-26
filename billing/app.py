@@ -1,5 +1,7 @@
 from flask import Flask
 
+app=Flask(__name__)
+
 # ____________________________________________________________
 # app routes/views
 @app.route("/health")
@@ -12,4 +14,3 @@ def health():
 # named as __main__
 if __name__=="__main__":
     app.run(debug=True)
-
