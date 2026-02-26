@@ -18,13 +18,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{db_user}:{db_p
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+
 # ____________________________________________________________
 # all routes
 
 # health check
 @app.route("/health")
 def health():
-     return {"status": "UP"},200
+    try:
+        # run lightweight DB check
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "OK",}), 200
+
+    except Exception as e:
+        return jsonify({"status": "Failure", "error": str(e)}), 500
 
 @app.route("/provider",methods=["POST"])
 def new_provider():
@@ -39,9 +46,6 @@ def new_provider():
     db.session.commit()
     return jsonify({"id": str(new_provider.id)}), 201
     
-
-
-
 def get_db_conn():
     return mysql.connector.connect(
         host=os.getenv("DB_HOST", "127.0.0.1"),
