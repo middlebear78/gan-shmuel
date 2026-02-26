@@ -1,7 +1,7 @@
 FROM mysql:9.0.1-oraclelinux9
 
 WORKDIR /docker-entrypoint-initdb.d
-COPY ./init.sql .
+COPY /db/weightdb.sql init.sql
 
 ENV MYSQL_DATABASE=${WEIGHT_DATABASE}
 ENV MYSQL_ROOT_PASSWORD=${WEIGHT_ROOT_PASSWORD}
