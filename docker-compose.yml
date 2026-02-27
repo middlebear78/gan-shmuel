@@ -1,0 +1,4 @@
+include:
+  - billing/docker-compose.yml
+  - weight/docker-compose.yml
+  - devops/docker-compose.yml
