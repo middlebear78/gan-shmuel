@@ -1,33 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gan Shmuel - Factory Management</title>
+    <title>גן שמואל - ניהול מפעל</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <nav class="sidebar">
       <div class="logo">
-        <span class="logo-icon">GS</span>
-        <span class="logo-text">Gan Shmuel</span>
+        <span class="logo-icon">גש</span>
+        <span class="logo-text">גן שמואל</span>
       </div>
       <ul class="nav-links">
         <li class="active" data-section="dashboard">
-          <span class="nav-icon">&#9633;</span> Dashboard
+          <span class="nav-icon">&#9633;</span> לוח בקרה
         </li>
         <li data-section="weight">
-          <span class="nav-icon">&#9878;</span> Weight Station
+          <span class="nav-icon">&#9878;</span> תחנת שקילה
         </li>
         <li data-section="billing">
-          <span class="nav-icon">&#36;</span> Billing
+          <span class="nav-icon">&#36;</span> חיובים
         </li>
         <li data-section="devops">
           <span class="nav-icon">&#9881;</span> DevOps
         </li>
       </ul>
       <div class="nav-footer">
-        <div class="env-badge">Production</div>
+        <div class="env-badge">ייצור</div>
       </div>
     </nav>
 
@@ -35,39 +35,39 @@
       <!-- Dashboard Section -->
       <section id="dashboard" class="section active">
         <div class="section-header">
-          <h1>Factory Dashboard</h1>
+          <h1>לוח בקרה</h1>
           <span class="timestamp" id="last-updated"></span>
         </div>
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-label">Weight Station</div>
-            <div class="stat-value" id="weight-status-text">Checking...</div>
+            <div class="stat-label">תחנת שקילה</div>
+            <div class="stat-value" id="weight-status-text">בודק...</div>
             <div class="stat-indicator" id="weight-indicator"></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Billing Service</div>
-            <div class="stat-value" id="billing-status-text">Checking...</div>
+            <div class="stat-label">שירות חיובים</div>
+            <div class="stat-value" id="billing-status-text">בודק...</div>
             <div class="stat-indicator" id="billing-indicator"></div>
           </div>
           <div class="stat-card">
             <div class="stat-label">DevOps / CI</div>
-            <div class="stat-value" id="devops-status-text">Checking...</div>
+            <div class="stat-value" id="devops-status-text">בודק...</div>
             <div class="stat-indicator" id="devops-indicator"></div>
           </div>
         </div>
 
         <div class="panels">
           <div class="panel">
-            <h2>Recent Weighings</h2>
+            <h2>שקילות אחרונות</h2>
             <div class="panel-body" id="recent-weighings">
-              <p class="placeholder">Waiting for Weight service...</p>
+              <p class="placeholder">ממתין לשירות שקילה...</p>
             </div>
           </div>
           <div class="panel">
-            <h2>Billing Overview</h2>
+            <h2>סקירת חיובים</h2>
             <div class="panel-body" id="billing-overview">
-              <p class="placeholder">Waiting for Billing service...</p>
+              <p class="placeholder">ממתין לשירות חיובים...</p>
             </div>
           </div>
         </div>
@@ -76,19 +76,19 @@
       <!-- Weight Section -->
       <section id="weight" class="section">
         <div class="section-header">
-          <h1>Weight Station</h1>
-          <span class="status-pill" id="weight-pill">Checking...</span>
+          <h1>תחנת שקילה</h1>
+          <span class="status-pill" id="weight-pill">בודק...</span>
         </div>
         <div class="panel">
-          <h2>Truck Weighings</h2>
+          <h2>שקילות משאיות</h2>
           <div class="panel-body" id="weight-data">
-            <p class="placeholder">Loading weight data...</p>
+            <p class="placeholder">טוען נתוני שקילה...</p>
           </div>
         </div>
         <div class="panel">
-          <h2>Unknown Containers</h2>
+          <h2>מכולות לא מזוהות</h2>
           <div class="panel-body" id="unknown-containers">
-            <p class="placeholder">Loading...</p>
+            <p class="placeholder">טוען...</p>
           </div>
         </div>
       </section>
@@ -96,19 +96,19 @@
       <!-- Billing Section -->
       <section id="billing" class="section">
         <div class="section-header">
-          <h1>Billing</h1>
-          <span class="status-pill" id="billing-pill">Checking...</span>
+          <h1>חיובים</h1>
+          <span class="status-pill" id="billing-pill">בודק...</span>
         </div>
         <div class="panel">
-          <h2>Providers</h2>
+          <h2>ספקים</h2>
           <div class="panel-body" id="providers-list">
-            <p class="placeholder">Loading providers...</p>
+            <p class="placeholder">טוען ספקים...</p>
           </div>
         </div>
         <div class="panel">
-          <h2>Current Rates</h2>
+          <h2>תעריפים נוכחיים</h2>
           <div class="panel-body" id="rates-data">
-            <p class="placeholder">Loading rates...</p>
+            <p class="placeholder">טוען תעריפים...</p>
           </div>
         </div>
       </section>
@@ -117,27 +117,27 @@
       <section id="devops" class="section">
         <div class="section-header">
           <h1>DevOps</h1>
-          <span class="status-pill" id="devops-pill">Checking...</span>
+          <span class="status-pill" id="devops-pill">בודק...</span>
         </div>
         <div class="panel">
-          <h2>System Health</h2>
+          <h2>בריאות המערכת</h2>
           <div class="panel-body">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Service</th>
-                  <th>Port</th>
-                  <th>Status</th>
+                  <th>שירות</th>
+                  <th>פורט</th>
+                  <th>סטטוס</th>
                 </tr>
               </thead>
               <tbody id="health-table">
                 <tr>
-                  <td>Weight</td>
+                  <td>שקילה</td>
                   <td>5000</td>
                   <td id="health-weight">--</td>
                 </tr>
                 <tr>
-                  <td>Billing</td>
+                  <td>חיובים</td>
                   <td>5001</td>
                   <td id="health-billing">--</td>
                 </tr>
@@ -147,9 +147,9 @@
                   <td id="health-devops">--</td>
                 </tr>
                 <tr>
-                  <td>Frontend</td>
+                  <td>ממשק</td>
                   <td>8080</td>
-                  <td class="online">Online</td>
+                  <td class="online">פעיל</td>
                 </tr>
               </tbody>
             </table>
