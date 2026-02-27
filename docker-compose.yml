@@ -2,4 +2,5 @@ include:
   # - billing/docker-compose.yml
   # - weight/docker-compose.yml
   # - devops/docker-compose.yml
-  - devops/ci-testing/frontend/docker-compose.yml
+  # - devops/ci-testing/frontend/docker-compose.yml
+  - frontend/docker-compose.yml

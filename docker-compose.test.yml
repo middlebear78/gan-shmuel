@@ -1,6 +1,7 @@
 services:
   frontend:
-    build: ./devops/ci-testing/frontend
+    build: ./frontend
+    # build: ./devops/ci-testing/frontend
     expose:
       - "80"
 
