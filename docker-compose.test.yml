@@ -1,0 +1,20 @@
+services:
+  frontend:
+    build: ./devops/ci-testing/frontend
+    expose:
+      - "80"
+
+  tests:
+    image: alpine:latest
+    depends_on:
+      - frontend
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Waiting for frontend..."
+        sleep 3
+        apk add --no-cache curl > /dev/null 2>&1
+        echo "Testing frontend..."
+        curl -f http://frontend:80/ || exit 1
+        echo "All tests passed."
