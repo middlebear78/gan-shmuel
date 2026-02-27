@@ -1,12 +1,11 @@
 // ── Service Configuration ──
-const BASE = window.location.hostname;
-const SERVICES = {
-  weight: { url: "/api/weight/health", port: 5000, label: "Weight Station" },
-  billing: { url: "/api/billing/health", port: 5001, label: "Billing" },
-  devops: { url: "/api/devops/health", port: 5002, label: "DevOps" },
+var BASE = window.location.hostname;
+var SERVICES = {
+  weight: { port: 5000, label: "תחנת שקילה" },
+  billing: { port: 5001, label: "חיובים" },
+  devops: { port: 5002, label: "DevOps" },
 };
 
-// In production, services run on different ports on the same host
 function serviceUrl(port, path) {
   return "http://" + BASE + ":" + port + path;
 }
@@ -35,21 +34,20 @@ function checkHealth() {
     fetch(serviceUrl(svc.port, "/health"), { mode: "cors" })
       .then(function (res) {
         if (res.ok) {
-          setStatus(name, "Online", true);
+          setStatus(name, "פעיל", true);
         } else {
-          setStatus(name, "Offline", false);
+          setStatus(name, "לא פעיל", false);
         }
       })
       .catch(function () {
-        setStatus(name, "Offline", false);
+        setStatus(name, "לא פעיל", false);
       });
   });
   document.getElementById("last-updated").textContent =
-    "Updated: " + new Date().toLocaleTimeString();
+    "עודכן: " + new Date().toLocaleTimeString("he-IL");
 }
 
 function setStatus(name, text, online) {
-  // Dashboard stat cards
   var statusText = document.getElementById(name + "-status-text");
   var indicator = document.getElementById(name + "-indicator");
   if (statusText) {
@@ -60,14 +58,12 @@ function setStatus(name, text, online) {
     indicator.className = "stat-indicator " + (online ? "online" : "offline");
   }
 
-  // Section pills
   var pill = document.getElementById(name + "-pill");
   if (pill) {
     pill.textContent = text;
     pill.className = "status-pill " + (online ? "online" : "offline");
   }
 
-  // DevOps health table
   var healthCell = document.getElementById("health-" + name);
   if (healthCell) {
     healthCell.textContent = text;
@@ -86,7 +82,6 @@ function loadSectionData(section) {
 }
 
 function loadWeightData() {
-  // Load recent weighings
   fetch(serviceUrl(5000, "/weight"), { mode: "cors" })
     .then(function (res) {
       return res.json();
@@ -95,7 +90,7 @@ function loadWeightData() {
       var el = document.getElementById("weight-data");
       if (Array.isArray(data) && data.length > 0) {
         var html =
-          '<table class="data-table"><thead><tr><th>ID</th><th>Direction</th><th>Truck</th><th>Bruto</th><th>Date</th></tr></thead><tbody>';
+          '<table class="data-table"><thead><tr><th>מזהה</th><th>כיוון</th><th>משאית</th><th>ברוטו</th><th>תאריך</th></tr></thead><tbody>';
         data.slice(0, 20).forEach(function (w) {
           html +=
             "<tr><td>" +
@@ -116,10 +111,9 @@ function loadWeightData() {
     })
     .catch(function () {
       document.getElementById("weight-data").innerHTML =
-        '<p class="placeholder">Weight service unavailable</p>';
+        '<p class="placeholder">שירות שקילה לא זמין</p>';
     });
 
-  // Load unknown containers
   fetch(serviceUrl(5000, "/unknown"), { mode: "cors" })
     .then(function (res) {
       return res.json();
@@ -133,17 +127,16 @@ function loadWeightData() {
           })
           .join("");
       } else {
-        el.innerHTML = '<p class="placeholder">No unknown containers</p>';
+        el.innerHTML = '<p class="placeholder">אין מכולות לא מזוהות</p>';
       }
     })
     .catch(function () {
       document.getElementById("unknown-containers").innerHTML =
-        '<p class="placeholder">Weight service unavailable</p>';
+        '<p class="placeholder">שירות שקילה לא זמין</p>';
     });
 }
 
 function loadBillingData() {
-  // Load rates
   fetch(serviceUrl(5001, "/rates"), { mode: "cors" })
     .then(function (res) {
       return res.json();
@@ -152,7 +145,7 @@ function loadBillingData() {
       var el = document.getElementById("rates-data");
       if (Array.isArray(data) && data.length > 0) {
         var html =
-          '<table class="data-table"><thead><tr><th>Product</th><th>Rate</th><th>Scope</th></tr></thead><tbody>';
+          '<table class="data-table"><thead><tr><th>מוצר</th><th>תעריף</th><th>היקף</th></tr></thead><tbody>';
         data.forEach(function (r) {
           html +=
             "<tr><td>" +
@@ -169,13 +162,11 @@ function loadBillingData() {
     })
     .catch(function () {
       document.getElementById("rates-data").innerHTML =
-        '<p class="placeholder">Billing service unavailable</p>';
+        '<p class="placeholder">שירות חיובים לא זמין</p>';
     });
 }
 
-// ── Dashboard Quick Data ──
 function loadDashboard() {
-  // Recent weighings for dashboard
   fetch(serviceUrl(5000, "/weight"), { mode: "cors" })
     .then(function (res) {
       return res.json();
@@ -184,7 +175,7 @@ function loadDashboard() {
       var el = document.getElementById("recent-weighings");
       if (Array.isArray(data) && data.length > 0) {
         var html =
-          '<table class="data-table"><thead><tr><th>Truck</th><th>Direction</th><th>Bruto</th></tr></thead><tbody>';
+          '<table class="data-table"><thead><tr><th>משאית</th><th>כיוון</th><th>ברוטו</th></tr></thead><tbody>';
         data.slice(0, 5).forEach(function (w) {
           html +=
             "<tr><td>" +
