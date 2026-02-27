@@ -4,15 +4,16 @@ import os
 import mysql.connector
 from models import Provider,db,Truck, Rate
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 load_dotenv()
 app=Flask(__name__)
 
-db_user = os.getenv("DB_USER", "root")
-db_pass = os.getenv("DB_PASSWORD", "rootpass")
-db_host = os.getenv("DB_HOST", "127.0.0.1")
-db_port = os.getenv("DB_PORT", "3306")
-db_name = os.getenv("DB_NAME", "billdb")
+db_user = os.getenv("DB_USER")
+db_pass = os.getenv("DB_PASSWORD")
+db_host = os.getenv("DB_HOST")
+db_port = os.getenv("DB_PORT")
+db_name = os.getenv("DB_NAME")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
