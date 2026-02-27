@@ -6,7 +6,7 @@ services:
       - MYSQL_DATABASE=${WEIGHT_DATABASE}
       - MYSQL_ROOT_PASSWORD=${WEIGHT_ROOT_PASSWORD}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${WEIGHT_ROOT_PASSWORD}"]
       start_period: 30s
       interval: 10s
       timeout: 10s
@@ -21,9 +21,13 @@ services:
       dockerfile: Dockerfile.weight.dev
     environment:
       - DB_HOSTNAME=db
+      - DB_NAME=${WEIGHT_DATABASE}
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${WEIGHT_ROOT_PASSWORD}
     ports:
       - "80:5000"
+    volumes:
+      - .:/app
     depends_on:
       db:
         condition: service_healthy
