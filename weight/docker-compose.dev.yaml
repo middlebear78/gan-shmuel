@@ -6,7 +6,7 @@ services:
       - MYSQL_DATABASE=${WEIGHT_DATABASE}
       - MYSQL_ROOT_PASSWORD=${WEIGHT_ROOT_PASSWORD}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${WEIGHT_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${WEIGHT_ROOT_PASSWORD}", "-p${WEIGHT_ROOT_PASSWORD}"]
       start_period: 30s
       interval: 10s
       timeout: 10s
