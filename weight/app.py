@@ -25,6 +25,26 @@ def parse_force(value):
     """ Convert various force inputs to a boolean. """
     return str(value).lower() == "true"
 
+# --- Business logic helpers ---
+
+def calculate_neto(bruto, truck_tara, container_ids):
+    """Calculate neto weight. Returns int or 'na' if any container tara unknown."""
+    container_taras = []
+
+    for cid in container_ids:
+        container = ContainerRegistered.query.filter_by(container_id=cid.strip()).first()
+        if container and container.weight is not None:
+            tara = container.weight
+            if container.unit == "lbs":
+                tara = lbs_to_kg(tara)
+            container_taras.append(tara)
+        else:
+            container_taras.append(None)
+
+    if None in container_taras:
+        return "na"
+    return bruto - truck_tara - sum(container_taras)
+
 # --- Routes ---
 
 @app.get("/health")
@@ -53,6 +73,24 @@ def post_weight():
     
     # --- IN or NONE: create a new session ---
     if direction in ("in", "none"):
+        # Check for existing open session for this truck
+        if truck != "na":
+            existing = Transaction.query.filter_by(
+                truck=truck, direction="in", truckTara=None
+            ).first()
+
+            if existing:
+                if direction == "none":
+                    # "none" after "in" is always an error
+                    return jsonify({"error": "truck has an open 'in' session, cannot use direction 'none'"}), 400
+                elif not force:
+                    # "in" after "in" without force is an error
+                    return jsonify({"error": "truck already weighed in, use force=true to overwrite"}), 400
+                else:
+                    # "in" after "in" with force — delete the old session
+                    db.session.delete(existing)
+                    db.session.commit()
+
         new_transaction = Transaction(
             direction=direction,
             truck=truck,
@@ -84,30 +122,24 @@ def post_weight():
         if not open_session:
             return jsonify({"error": "no open 'in' session for this truck"}), 400
         
-        # 2. truckTara is the weight from the scale right now
+        # 2. Check for existing "out" in this session
+        existing_out = Transaction.query.filter_by(
+            session_id=open_session.session_id, direction="out"
+        ).first()
+
+        if existing_out:
+            if not force:
+                return jsonify({"error": "truck already weighed out, use force=true to overwrite"}), 400
+            else:
+                db.session.delete(existing_out)
+                db.session.commit()
+        
+        # 3. truckTara is the weight from the scale right now
         truck_tara = weight
 
-        # 3. Look up each container's tara weight
-        containers_ids = open_session.containers.split(",") if open_session.containers else []
-        containers_taras = []
-
-        for cid in containers_ids:
-            container = ContainerRegistered.query.filter_by(container_id=cid.strip()).first()
-            if container and container.weight is not None:
-                # Convert container weight if stored in lbs
-                tara = container.weight
-                if container.unit == "lbs":
-                    tara = lbs_to_kg(tara)
-                containers_taras.append(tara)
-            else:
-                # Unkown container tara - neto will be "na"
-                containers_taras.append(None)
-        
-        # 4. Calculate neto
-        if None in containers_taras:
-            neto = "na"
-        else:
-            neto = open_session.bruto - truck_tara - sum(containers_taras)
+        # 4. Look up each container's tara weight & calculate neto
+        container_ids = open_session.containers.split(",") if open_session.containers else []
+        neto = calculate_neto(open_session.bruto, truck_tara, container_ids)
         
         # 5. Create the "out" transaction
         out_transaction = Transaction(
