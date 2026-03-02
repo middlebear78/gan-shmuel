@@ -11,6 +11,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
+
 # --- Utility functions ---
 
 def lbs_to_kg(lbs):
@@ -24,6 +25,16 @@ def parse_containers(containers_str):
 def parse_force(value):
     """ Convert various force inputs to a boolean. """
     return str(value).lower() == "true"
+
+def parse_datetime_param(dt_str):
+    """Parse yyyymmddhhmmss string to datetime. Returns None if invalid."""
+    try:
+        if len(dt_str) != 14:
+            return None
+        return datetime.strptime(dt_str, "%Y%m%d%H%M%S")
+    except (ValueError, TypeError):
+        return None
+
 
 # --- Business logic helpers ---
 
@@ -45,11 +56,13 @@ def calculate_neto(bruto, truck_tara, container_ids):
         return "na"
     return bruto - truck_tara - sum(container_taras)
 
+
 # --- Routes ---
 
 @app.get("/health")
 def health():
     return Response("OK", status=200, mimetype="text/plain")
+
 
 @app.post("/weight")
 def post_weight():
@@ -167,6 +180,50 @@ def post_weight():
     
     else:
         return jsonify({"error": "invalid direction"}), 400
+    
+
+@app.get("/weight")
+def get_weight():
+    # Defaults: from = today midnight, to = right now
+    now = datetime.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Read query params
+    from_str = request.args.get("from")
+    to_str = request.args.get("to")
+    filter_str = request.args.get("filter", "in,out,none")
+
+    # Parse dates — use defaults if not provided
+    dt_from = parse_datetime_param(from_str) if from_str else today_start
+    dt_to = parse_datetime_param(to_str) if to_str else now
+
+    if dt_from is None or dt_to is None:
+        return jsonify({"error": "invalid datetime format, expected yyyymmddhhmmss"}), 400
+
+    # Split filter string into a list
+    directions = [d.strip() for d in filter_str.split(",")]
+
+    # Query transactions based on datetime range and direction filter
+    transactions = Transaction.query.filter(
+        Transaction.datetime >= dt_from,
+        Transaction.datetime <= dt_to,
+        Transaction.direction.in_(directions)
+    ).all()
+
+    # Format the response
+    result = []
+    for t in transactions:
+        containers = t.containers.split(",") if t.containers else []
+        result.append({
+            "id": t.id,
+            "direction": t.direction,
+            "bruto": t.bruto,
+            "neto": t.neto if t.neto is not None else "na",
+            "produce": t.produce,
+            "containers": containers
+        })
+
+    return jsonify(result), 200
 
 
 if __name__ == "__main__":
