@@ -1,0 +1,76 @@
+w#!/bin/bash
+
+# Pre-push hook: runs unit and integration tests locally before allowing a push.
+# Only runs for app team branches (weight, billing, frontend).
+# Tests run with pytest directly (no Docker).
+
+set -e
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+APP_BRANCHES=("weight" "billing" "frontend")
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Check if current branch is an app branch
+is_app_branch=false
+for app in "${APP_BRANCHES[@]}"; do
+    if [[ "$BRANCH" == "$app" || "$BRANCH" == "$app/"* ]]; then
+        is_app_branch=true
+        APP_FOLDER="$app"
+        break
+    fi
+done
+
+if [ "$is_app_branch" = false ]; then
+    exit 0
+fi
+
+APP_PATH="$REPO_ROOT/$APP_FOLDER"
+
+# Verify the app folder and tests exist
+if [ ! -d "$APP_PATH" ]; then
+    echo "Warning: $APP_FOLDER folder not found. Skipping tests."
+    exit 0
+fi
+
+if [ ! -d "$APP_PATH/tests" ]; then
+    echo "Warning: No tests folder found in $APP_FOLDER. Skipping tests."
+    exit 0
+fi
+
+echo "========================================"
+echo "Pre-push hook: running tests for $APP_FOLDER"
+echo "========================================"
+
+# Run unit tests
+if [ -d "$APP_PATH/tests/unit" ]; then
+    echo ""
+    echo "→ Running unit tests..."
+    if ! pytest "$APP_PATH/tests/unit" -v; then
+        echo ""
+        echo "UNIT TESTS FAILED. Push blocked."
+        exit 1
+    fi
+    echo "Unit tests passed."
+else
+    echo "No unit tests found. Skipping."
+fi
+
+# Run integration tests
+if [ -d "$APP_PATH/tests/integration" ]; then
+    echo ""
+    echo "→ Running integration tests..."
+    if ! pytest "$APP_PATH/tests/integration" -v; then
+        echo ""
+        echo "INTEGRATION TESTS FAILED. Push blocked."
+        exit 1
+    fi
+    echo "Integration tests passed."
+else
+    echo "No integration tests found. Skipping."
+fi
+
+echo ""
+echo "========================================"
+echo "All tests passed. Push proceeding."
+echo "========================================"
+exit 0

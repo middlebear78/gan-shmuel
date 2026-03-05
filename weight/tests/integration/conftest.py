@@ -4,15 +4,10 @@ from database import db
 from models import Transaction, ContainerRegistered
 
 
-@pytest.fixture
-def client():
-    """Create a Flask test client."""
-    app.config["TESTING"] = True
-    yield app.test_client()
-
 @pytest.fixture(autouse=True)
-def setup_and_cleanup():
-    """Set up test data and clean up after each test."""
+def client():
+    """Create a Flask test client with test data — all in one app context."""
+    app.config["TESTING"] = True
     with app.app_context():
         Transaction.query.filter(Transaction.truck.like("TEST-%")).delete()
         existing = ContainerRegistered.query.filter_by(container_id="TEST-C1").first()
@@ -22,7 +17,8 @@ def setup_and_cleanup():
         if not existing2:
             db.session.add(ContainerRegistered(container_id="TEST-C2", weight=200, unit="kg"))
         db.session.commit()
-    yield
-    with app.app_context():
+
+        yield app.test_client()
+
         Transaction.query.filter(Transaction.truck.like("TEST-%")).delete()
         db.session.commit()

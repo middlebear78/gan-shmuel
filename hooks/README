@@ -1,0 +1,39 @@
+PRE-PUSH HOOK SETUP
+===================
+
+This hook runs unit and integration tests locally before
+allowing a push to app branches (weight, billing, frontend).
+
+Step 1 - Get the hooks folder onto your branch (team lead does this once):
+
+  This folder lives on the devops branch. To bring it into your
+  team branch, run this from your branch. You don't need to switch
+  branches — this command reaches into the devops branch on the
+  remote and copies the hooks folder into your current branch:
+
+  git fetch origin devops
+  git checkout origin/devops -- hooks/
+  git add hooks/
+  git commit -m "Add pre-push hook"
+  git push
+
+  Now everyone on your team can pull it normally.
+
+Step 2 - Every developer on the team (one time each):
+
+  git pull
+  ./hooks/setup.sh
+
+  This copies the hook into your local .git/hooks/ folder,
+  which is where Git looks for hooks. Git never syncs this
+  folder — that's why the copy is needed.
+
+Done. The hook runs automatically on every push from now on.
+
+What it does:
+  - Pushes to weight, billing, or frontend → tests run first
+  - Tests fail → push is blocked, fix locally and try again
+  - Pushes to any other branch → hook does nothing
+
+To skip the hook (not recommended):
+  git push --no-verify
