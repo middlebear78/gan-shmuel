@@ -1,22 +1,25 @@
 
 from flask import Flask, request, jsonify
-import os
+# import os
 # import mysql.connector
 from models import Provider,db,Truck, Rate
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from sqlalchemy import text
+from config import Config
 
-load_dotenv()
+# load_dotenv()
+
 app=Flask(__name__)
+app.config.from_object(Config)
 
-db_user = os.getenv("DB_USER", "root")
-db_pass = os.getenv("DB_PASSWORD", "")
-db_host = os.getenv("DB_HOST", "127.0.0.1")
-db_port = os.getenv("DB_PORT", "3306")
-db_name = os.getenv("DB_NAME", "billdb")
+# db_user = os.getenv("DB_USER", "root")
+# db_pass = os.getenv("DB_PASSWORD", "")
+# db_host = os.getenv("DB_HOST", "127.0.0.1")
+# db_port = os.getenv("DB_PORT", "3306")
+# db_name = os.getenv("DB_NAME", "billing_db")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
@@ -42,7 +45,7 @@ def new_provider():
     if not provider_name:
         return jsonify({"error": "Provider name is required"}), 400
     if Provider.query.filter_by(name=provider_name).first()!=None:
-        return jsonify({"message":f"Provider '{provider_name}' is already exist"}),400
+        return jsonify({"message":f"Provider '{provider_name}' is already exist"}),409
     new_provider = Provider(name=provider_name)
     db.session.add(new_provider)
     db.session.commit()
