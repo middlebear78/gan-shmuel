@@ -11,8 +11,12 @@ Step 1 - Get the hooks folder onto your branch (team lead does this once):
   branches — this command reaches into the devops branch on the
   remote and copies the hooks folder into your current branch:
 
+  IMPORTANT: Run all commands from the repo root folder, NOT from
+  inside your team's subfolder (e.g. weight/, billing/).
+
+  cd ~/Desktop/develeap/project1/gan-shmuel
   git fetch origin devops
-  git checkout origin/devops -- hooks/
+  git checkout origin/devops -- hooks
   git add hooks/
   git commit -m "Add pre-push hook"
   git push
