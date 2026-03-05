@@ -28,8 +28,8 @@ def new_provider():
     provider_name = data.get('name')
     if not provider_name:
         return jsonify({"error": "Provider name is required"}), 400
-    if Provider.query.filter_by(name=provider_name).first()!=None:
-        return jsonify({"message":f"Provider '{provider_name}' is already exist"}),409
+    if Provider.query.filter_by(Provider.name.ilike(provider_name)).first() != None:
+        return jsonify({"message":f"Provider '{provider_name}' already exist"}),409
     new_provider = Provider(name=provider_name)
     db.session.add(new_provider)
     db.session.commit()
@@ -50,7 +50,7 @@ def update_provider(provider_id):
     if not provider:
         return jsonify({"error": "provider not found"}), 404
 
-    # enforce unique name
+    # enforce unique name (Case-insensitive)
     existing = Provider.query.filter(
         Provider.name.ilike(new_name),
         Provider.id != provider_id
