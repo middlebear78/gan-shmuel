@@ -1,10 +1,8 @@
-w#!/bin/bash
+#!/bin/bash
 
-# Pre-push hook: runs unit and integration tests locally before allowing a push.
+# Pre-push hook: runs unit and integration tests inside Docker before allowing a push.
 # Only runs for app team branches (weight, billing, frontend).
-# Tests run with pytest directly (no Docker).
-
-set -e
+# Spins up containers, runs tests, tears down — regardless of pass/fail.
 
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
 APP_BRANCHES=("weight" "billing" "frontend")
@@ -26,14 +24,23 @@ fi
 
 APP_PATH="$REPO_ROOT/$APP_FOLDER"
 
-# Verify the app folder and tests exist
+# Verify the app folder exists
 if [ ! -d "$APP_PATH" ]; then
     echo "Warning: $APP_FOLDER folder not found. Skipping tests."
     exit 0
 fi
 
-if [ ! -d "$APP_PATH/tests" ]; then
-    echo "Warning: No tests folder found in $APP_FOLDER. Skipping tests."
+# Find docker-compose file
+COMPOSE_FILE=""
+for f in docker-compose.dev.yaml docker-compose.dev.yml docker-compose.yaml docker-compose.yml; do
+    if [ -f "$APP_PATH/$f" ]; then
+        COMPOSE_FILE="$f"
+        break
+    fi
+done
+
+if [ -z "$COMPOSE_FILE" ]; then
+    echo "Warning: No docker-compose file found in $APP_FOLDER. Skipping tests."
     exit 0
 fi
 
@@ -41,36 +48,79 @@ echo "========================================"
 echo "Pre-push hook: running tests for $APP_FOLDER"
 echo "========================================"
 
+cd "$APP_PATH"
+
+# Ensure containers are torn down on exit (pass or fail or crash)
+cleanup() {
+    echo ""
+    echo "→ Tearing down containers..."
+    docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null
+}
+trap cleanup EXIT
+
+# Build and start containers
+echo ""
+echo "→ Building and starting containers..."
+if ! docker compose -f "$COMPOSE_FILE" up --build -d; then
+    echo ""
+    echo "BUILD FAILED. Push blocked."
+    exit 1
+fi
+
+# Wait for services to be healthy
+echo "→ Waiting for services to be ready..."
+sleep 5
+
+# Find the app container
+APP_CONTAINER=$(docker compose -f "$COMPOSE_FILE" ps -q app 2>/dev/null)
+if [ -z "$APP_CONTAINER" ]; then
+    echo "Warning: Could not find app container. Skipping tests."
+    exit 0
+fi
+
+TEST_RESULT=0
+
 # Run unit tests
-if [ -d "$APP_PATH/tests/unit" ]; then
+if [ -d "tests/unit" ]; then
     echo ""
     echo "→ Running unit tests..."
-    if ! pytest "$APP_PATH/tests/unit" -v; then
+    if ! docker exec "$APP_CONTAINER" pytest tests/unit -v; then
         echo ""
         echo "UNIT TESTS FAILED. Push blocked."
-        exit 1
+        TEST_RESULT=1
+    else
+        echo "Unit tests passed."
     fi
-    echo "Unit tests passed."
 else
     echo "No unit tests found. Skipping."
 fi
 
-# Run integration tests
-if [ -d "$APP_PATH/tests/integration" ]; then
-    echo ""
-    echo "→ Running integration tests..."
-    if ! pytest "$APP_PATH/tests/integration" -v; then
+# Run integration tests (only if unit tests passed)
+if [ "$TEST_RESULT" -eq 0 ]; then
+    if [ -d "tests/integration" ]; then
         echo ""
-        echo "INTEGRATION TESTS FAILED. Push blocked."
-        exit 1
+        echo "→ Running integration tests..."
+        if ! docker exec "$APP_CONTAINER" pytest tests/integration -v; then
+            echo ""
+            echo "INTEGRATION TESTS FAILED. Push blocked."
+            TEST_RESULT=1
+        else
+            echo "Integration tests passed."
+        fi
+    else
+        echo "No integration tests found. Skipping."
     fi
-    echo "Integration tests passed."
-else
-    echo "No integration tests found. Skipping."
 fi
 
 echo ""
-echo "========================================"
-echo "All tests passed. Push proceeding."
-echo "========================================"
-exit 0
+if [ "$TEST_RESULT" -eq 0 ]; then
+    echo "========================================"
+    echo "All tests passed. Push proceeding."
+    echo "========================================"
+else
+    echo "========================================"
+    echo "Tests failed. Push blocked."
+    echo "========================================"
+fi
+
+exit $TEST_RESULT
