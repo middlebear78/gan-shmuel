@@ -1,4 +1,0 @@
-This file is a test to verify the local pre-push hook is working.
-If you see this file, it means the hook ran all unit and integration
-tests successfully before allowing this push.
-This file can be safely deleted.
