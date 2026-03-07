@@ -1,6 +1,6 @@
 -- Billing DB
-CREATE DATABASE IF NOT EXISTS billdb;
-USE billdb;
+CREATE DATABASE IF NOT EXISTS billing_db;
+USE billing_db;
 
 -- Provider: name should be unique and not null
 CREATE TABLE IF NOT EXISTS Provider (
