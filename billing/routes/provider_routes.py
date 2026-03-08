@@ -6,7 +6,7 @@ provider_bp = Blueprint("provider", __name__)
 # ____________________________________________________________________
 # helper functions
 def checkProviderExists(providerName:str):
-    return Provider.query.filter(Provider.name.ilike(providerName)).first()
+    return Provider.query.filter(Provider.name.ilike(providerName)).first() # type: ignore
 
 # ____________________________________________________________________
 # routes

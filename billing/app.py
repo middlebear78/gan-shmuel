@@ -6,7 +6,7 @@ from config import Config
 # routes Imports
 from routes.provider_routes import provider_bp
 from routes.healthCheck_route import health_bp
-#dsfsfdsjfklds
+
 app=Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
