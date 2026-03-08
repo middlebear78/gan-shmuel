@@ -49,11 +49,26 @@ def parse_csv(filepath):
         reader = csv.reader(f)
         header = next(reader)
 
-        # header[1] tells us the unit: "kg" or "lbs"
+        if header[0].strip().lower() != "id":
+            raise ValueError(f"unexpected first column: '{header[0]}', expected 'id'")
+
         unit = header[1].strip().lower()
 
-        for row in reader:
+        if unit not in ("kg", "lbs"):
+            raise ValueError(f"unsupported unit in header: '{header[1]}'")
+
+        for i, row in enumerate(reader, start=2):
+            if len(row) < 2:
+                raise ValueError(f"row {i}: expected 2 columns, got {len(row)}")
+
             container_id = row[0].strip()
+
+            if not container_id:
+                raise ValueError(f"row {i}: missing container id")
+            
+            if not row[1].strip():
+                raise ValueError(f"row {i}: missing weight value")
+
             weight = int(row[1].strip())
 
             if unit == "lbs":
@@ -63,24 +78,37 @@ def parse_csv(filepath):
 
     return records
 
+
 def parse_json(filepath):
     """Parse a JSON file and return a list of (id, weight_in_kg) tuples."""
     with open(filepath, "r") as f:
         data = json.load(f)
 
-    records = []
-    for item in data:
-        container_id = item["id"]
-        weight = int(item["weight"])
-        unit = item.get("unit", "kg")
+    if not isinstance(data, list):
+        raise ValueError("expected a JSON array")
 
+    records = []
+    for i, item in enumerate(data):
+        if "id" not in item or "weight" not in item:
+            raise ValueError(f"item {i}: missing 'id' or 'weight' field")
+
+        container_id = item["id"]
+
+        if not container_id:
+            raise ValueError(f"item {i}: empty 'id' field")
+        
+        if item["weight"] is None:
+            raise ValueError(f"item {i}: missing weight value")
+
+        weight = int(item["weight"])
+
+        unit = item.get("unit", "kg")
         if unit == "lbs":
             weight = lbs_to_kg(weight)
 
         records.append((container_id, weight))
 
     return records
-
 
 # --- Business logic helpers ---
 
@@ -314,8 +342,6 @@ def post_batch_weight():
 
     return jsonify({"message": f"processed {len(records)} records"}), 200
 
-
-    
 
 
 if __name__ == "__main__":
