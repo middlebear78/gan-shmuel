@@ -30,3 +30,4 @@ CREATE TABLE IF NOT EXISTS Rates (
   scope      VARCHAR(50) NOT NULL,
   PRIMARY KEY (product_id, scope)
 ) ENGINE=InnoDB;
+

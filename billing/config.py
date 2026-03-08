@@ -12,3 +12,8 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = f"mysql+mysqlconnector://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+# testing
+class TestConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"  # Use in-memory database for testing

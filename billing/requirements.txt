@@ -4,3 +4,4 @@ Flask-SQLAlchemy
 pytest>=9.0.2
 requests
 python-dotenv
+

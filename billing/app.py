@@ -6,7 +6,8 @@ from config import Config
 from routes.provider_routes import provider_bp
 from routes.healthCheck_route import health_bp
 from routes.rates_route import rates_bp
-from routes.truck_route import truck_bp
+from routes.truck_routes import truck_bp
+
 
 app=Flask(__name__)
 app.config.from_object(Config)
