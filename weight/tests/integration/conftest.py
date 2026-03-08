@@ -4,25 +4,25 @@ from database import db
 from models import Transaction, ContainerRegistered
 
 
-@pytest.fixture
-def client():
-    """Create a Flask test client."""
-    app.config["TESTING"] = True
-    yield app.test_client()
-
 @pytest.fixture(autouse=True)
-def setup_and_cleanup():
-    """Set up test data and clean up after each test."""
+def client():
+    """Create a Flask test client with test data — all in one app context."""
+    app.config["TESTING"] = True
     with app.app_context():
-        Transaction.query.filter(Transaction.truck.like("TEST-%")).delete()
-        existing = ContainerRegistered.query.filter_by(container_id="TEST-C1").first()
-        if not existing:
-            db.session.add(ContainerRegistered(container_id="TEST-C1", weight=300, unit="kg"))
-        existing2 = ContainerRegistered.query.filter_by(container_id="TEST-C2").first()
-        if not existing2:
-            db.session.add(ContainerRegistered(container_id="TEST-C2", weight=200, unit="kg"))
+        db.session.remove()
+
+        # Ensure test containers exist
+        for cid, w in [("TEST-C1", 300), ("TEST-C2", 200)]:
+            if not ContainerRegistered.query.filter_by(container_id=cid).first():
+                db.session.add(ContainerRegistered(container_id=cid, weight=w, unit="kg"))
         db.session.commit()
-    yield
-    with app.app_context():
-        Transaction.query.filter(Transaction.truck.like("TEST-%")).delete()
+
+
+        # Capture the current max id — everything above this was created by the test
+        max_id = db.session.query(db.func.max(Transaction.id)).scalar() or 0
+        yield app.test_client()
+        db.session.remove()
+
+   
+        Transaction.query.filter(Transaction.id > max_id).delete()
         db.session.commit()
