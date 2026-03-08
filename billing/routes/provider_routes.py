@@ -5,8 +5,8 @@ provider_bp = Blueprint("provider", __name__)
 
 # ____________________________________________________________________
 # helper functions
-def checkProviderExists(providerName:str):
-    return Provider.query.filter(Provider.name.ilike(providerName)).first() # type: ignore
+def checkProviderExists(providerName: str):
+    return Provider.query.filter(db.func.lower(Provider.name) == providerName.lower()).first()
 
 # ____________________________________________________________________
 # routes
@@ -19,9 +19,9 @@ def new_provider():
     if not provider_name:
         return jsonify({"error": "Provider name is required"}), 400
     
-    existing = checkProviderExists(provider_name)
-    if existing:
-        return jsonify({"error": f"Provider '{provider_name}' already exists"}), 409
+    existing = checkProviderExists(new_name)
+    if existing and existing.id != provider_id:
+        return jsonify({"error": f"Provider '{new_name}' already exists"}), 409
 
     new_provider = Provider(name=provider_name)
     db.session.add(new_provider)
