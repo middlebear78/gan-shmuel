@@ -1,15 +1,17 @@
 from flask import Blueprint, request, jsonify
 from models import db, Provider, Truck
-
 from datetime import datetime
 import requests
+from dotenv import load_dotenv
+import os
+
 truck_bp = Blueprint("truck", __name__)
 
-WEIGHT_SERVER_URL=""
+WEIGHT_SERVER_URL=os.getenv("WEIGHT_SERVER_URL")
 
 @truck_bp.route("/truck", methods=["POST"])
 def new_truck():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     truck_id=data.get("id")
     provider_id = data.get("provider")
     if not truck_id or not provider_id:
