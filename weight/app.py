@@ -228,8 +228,13 @@ def get_weight():
     return jsonify(result), 200
 
 
-@app.get("/session/<int:session_id>")
+@app.get("/session/<session_id>")
 def get_session(session_id):
+    try:
+        session_id = int(session_id)
+    except ValueError:
+        return jsonify({"error": "invalid session id"}), 400
+
     out_transaction = Transaction.query.filter_by(
         session_id=session_id,
         direction="out"
