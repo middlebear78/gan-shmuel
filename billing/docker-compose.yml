@@ -22,7 +22,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:5000"
+      - "8090:5000"
     depends_on:
       mysql:
         condition: service_healthy
