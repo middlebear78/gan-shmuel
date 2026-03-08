@@ -1,5 +1,7 @@
 from flask import Flask, Response, request, jsonify
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
 from database import db
 from models import ContainerRegistered, Transaction
 import config
