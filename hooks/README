@@ -11,6 +11,31 @@ frontend) — those are PR-protected and no one can push to them directly.
 REQUIREMENTS:
   - Docker must be running on your machine
   - A .env file must exist in your app folder (copy from .env.example)
+  - Tests must follow the exact folder structure below
+
+TEST FOLDER STRUCTURE:
+  The hook looks for tests in specific folder paths inside your
+  app folder. These names are exact — any other naming will be
+  silently skipped.
+
+  <your-app-folder>/
+  ├── tests/
+  │   ├── unit/           <- unit tests go here
+  │   └── integration/    <- integration tests go here
+
+  Examples:
+    weight/tests/unit/test_weight.py
+    billing/tests/integration/test_api.py
+
+  WRONG names (will be silently ignored):
+    tests/unit_tests/     <- wrong
+    tests/Units/          <- wrong
+    test/unit/            <- wrong ("test" instead of "tests")
+    unit_tests/           <- wrong (must be inside tests/)
+
+  The hook runs pytest on these folders inside the Docker container.
+  If a folder doesn't exist, the hook skips it and lets the push
+  through — so make sure your tests are in the right place.
 
 Step 1 - Get the hooks folder onto your branch (team lead does this once):
 
