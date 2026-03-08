@@ -39,12 +39,6 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=10001;
 
--------------------
------MOCK DATA-----
--------------------
-
-USE weight;
-
 -- Clean up existing data for a fresh test
 TRUNCATE TABLE containers_registered;
 TRUNCATE TABLE transactions;
