@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from models import db, Provider, Truck, Rate
-from sqlalchemy import text
 from config import Config
 
 # routes Imports
