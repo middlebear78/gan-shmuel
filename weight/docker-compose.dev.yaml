@@ -3,10 +3,10 @@ services:
     build:
       dockerfile: Dockerfile.mysql.dev
     environment:
-      - MYSQL_DATABASE=${WEIGHT_DATABASE}
-      - MYSQL_ROOT_PASSWORD=${WEIGHT_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${WEIGHT_ROOT_PASSWORD}", "-p${WEIGHT_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}"]
       start_period: 30s
       interval: 10s
       timeout: 10s
@@ -21,9 +21,9 @@ services:
       dockerfile: Dockerfile.weight.dev
     environment:
       - DB_HOSTNAME=db
-      - DB_NAME=${WEIGHT_DATABASE}
+      - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
-      - DB_PASSWORD=${WEIGHT_ROOT_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD}
     ports:
       - "80:5000"
     volumes:
