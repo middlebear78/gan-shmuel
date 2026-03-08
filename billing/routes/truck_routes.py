@@ -62,6 +62,9 @@ def data_about_truck(truck_id):
             "tara": tara,
             "sessions":sessions}), 200
 
+
+#######################
+
 def get_time_range():
     now = datetime.now()
     default_t1_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
