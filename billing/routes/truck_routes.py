@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify
 from models import db, Provider, Truck
+
 from datetime import datetime
 import requests
 truck_bp = Blueprint("truck", __name__)
 
 WEIGHT_SERVER_URL=""
+
 @truck_bp.route("/truck", methods=["POST"])
 def new_truck():
     data = request.get_json()

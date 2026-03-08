@@ -3,5 +3,4 @@ mysql-connector-python
 Flask-SQLAlchemy
 pytest>=9.0.2
 requests
-pytest
-pytest-flask
+python-dotenv
