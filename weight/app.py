@@ -1,5 +1,7 @@
 from flask import Flask, Response, request, jsonify
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
 from database import db
 from models import ContainerRegistered, Transaction
 import config
@@ -110,7 +112,7 @@ def post_weight():
             containers=",".join(containers),
             bruto=weight,
             produce=produce,
-            datetime=datetime.now()
+            datetime=datetime.now().replace(microsecond=0)
         )
 
         db.session.add(new_transaction)
@@ -163,7 +165,7 @@ def post_weight():
             truckTara=truck_tara,
             neto=neto if neto != "na" else None,
             produce=open_session.produce,
-            datetime=datetime.now(),
+            datetime=datetime.now().replace(microsecond=0),
             session_id=open_session.session_id
         )
 
@@ -224,6 +226,42 @@ def get_weight():
         })
 
     return jsonify(result), 200
+
+
+@app.get("/session/<session_id>")
+def get_session(session_id):
+    try:
+        session_id = int(session_id)
+    except ValueError:
+        return jsonify({"error": "invalid session id"}), 400
+
+    out_transaction = Transaction.query.filter_by(
+        session_id=session_id,
+        direction="out"
+    ).first()
+
+    if out_transaction:
+        return jsonify({
+            "id": str(out_transaction.session_id),
+            "truck": out_transaction.truck,
+            "bruto": out_transaction.bruto,
+            "truckTara": out_transaction.truckTara,
+            "neto": out_transaction.neto if out_transaction.neto is not None else "na"
+        }), 200
+
+    in_transaction = Transaction.query.filter_by(
+        session_id=session_id,
+        direction="in"
+    ).first()
+
+    if in_transaction:
+        return jsonify({
+            "id": str(in_transaction.session_id),
+            "truck": in_transaction.truck,
+            "bruto": in_transaction.bruto
+        }), 200
+
+    return jsonify({"error": "session not found"}), 404
 
 
 if __name__ == "__main__":
