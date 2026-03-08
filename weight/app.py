@@ -299,7 +299,7 @@ def get_weight():
 
     return jsonify(result), 200
 
-@app.post("batch-weight")
+@app.post("/batch-weight")
 def post_batch_weight():
     data = request.get_json(silent=True) or request.form.to_dict()
     filename = data.get("file")
