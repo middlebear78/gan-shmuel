@@ -28,4 +28,4 @@ services:
         condition: service_healthy
 
 volumes:
-  gan_mysql_data:
+  billing-mysql_data:
