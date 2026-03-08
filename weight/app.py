@@ -112,7 +112,7 @@ def post_weight():
             containers=",".join(containers),
             bruto=weight,
             produce=produce,
-            datetime=datetime.now()
+            datetime=datetime.now().replace(microsecond=0)
         )
 
         db.session.add(new_transaction)
@@ -165,7 +165,7 @@ def post_weight():
             truckTara=truck_tara,
             neto=neto if neto != "na" else None,
             produce=open_session.produce,
-            datetime=datetime.now(),
+            datetime=datetime.now().replace(microsecond=0),
             session_id=open_session.session_id
         )
 
