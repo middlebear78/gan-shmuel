@@ -225,6 +225,58 @@ def get_weight():
 
     return jsonify(result), 200
 
+@app.get('/item/<id>')
+def get_item(id):
+    now = datetime.now()
+    default_t1 = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    from_str = request.args.get("from")
+    to_str = request.args.get("to")
+
+    if dt_from is None or dt_to is None:
+        return jsonify({"error": "invalid datetime format, expected yyyymmddhhmmss"}), 400
+
+    dt_from = parse_datetime_param(from_str) if from_str else default_t1
+    dt_to = parse_datetime_param(to_str) if to_str else now
+
+    container_id = ContainerRegistered.query.filter_by(container_id=id).first()
+    if not container_id:
+        truck_id = Transaction.query.filter_by(truck=id).first()
+        if not truck_id:
+            return jsonify({"error": "container not found"}), 404
+
+    is_container = True if container_id else False
+    id = container_id.container_id if is_container else truck_id.truck_id
+
+    transactions = Transaction.query.filter(
+        Transaction.session_id == id,
+        Transaction.datetime >= dt_from,
+        Transaction.datetime <= dt_to
+    ).all()
+
+    result = []
+    for t in transactions:
+        containers = t.containers.split(",") if t.containers else []
+        result.append({
+            "id": t.id,
+            "direction": t.direction,
+            "bruto": t.bruto,
+            "neto": t.neto if t.neto is not None else "na",
+            "produce": t.produce,
+            "containers": containers
+        })
+
+    return jsonify(result), 200
+
+
+
+
+
+
+
+
+    
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
