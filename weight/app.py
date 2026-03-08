@@ -228,5 +228,41 @@ def get_weight():
     return jsonify(result), 200
 
 
+@app.get("/session/<session_id>")
+def get_session(session_id):
+    try:
+        session_id = int(session_id)
+    except ValueError:
+        return jsonify({"error": "invalid session id"}), 400
+
+    out_transaction = Transaction.query.filter_by(
+        session_id=session_id,
+        direction="out"
+    ).first()
+
+    if out_transaction:
+        return jsonify({
+            "id": str(out_transaction.session_id),
+            "truck": out_transaction.truck,
+            "bruto": out_transaction.bruto,
+            "truckTara": out_transaction.truckTara,
+            "neto": out_transaction.neto if out_transaction.neto is not None else "na"
+        }), 200
+
+    in_transaction = Transaction.query.filter_by(
+        session_id=session_id,
+        direction="in"
+    ).first()
+
+    if in_transaction:
+        return jsonify({
+            "id": str(in_transaction.session_id),
+            "truck": in_transaction.truck,
+            "bruto": in_transaction.bruto
+        }), 200
+
+    return jsonify({"error": "session not found"}), 404
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
