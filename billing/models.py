@@ -19,7 +19,7 @@ class Truck(db.Model):
     __tablename__ = 'Trucks'
     id = db.Column(db.String(10), primary_key=True)
     provider_id = db.Column(db.Integer, db.ForeignKey('Provider.id'), nullable=False)
-    def to_dict(self):
+    def to_dict(self,id,provider_id):
         return {
             "id": self.id,
             "provider_id": self.provider_id
