@@ -12,17 +12,27 @@ def client():
 
 @pytest.fixture(autouse=True)
 def setup_and_cleanup():
-    """Set up test data and clean up after each test."""
+    """Set up test data and clean up after each test.
+
+    Uses max-id approach: captures the highest transaction id before the test,
+    then deletes everything above it after. This catches ALL test-created records
+    regardless of truck name (including truck='na').
+    """
     with app.app_context():
-        Transaction.query.filter(Transaction.truck.like("TEST-%")).delete()
-        existing = ContainerRegistered.query.filter_by(container_id="TEST-C1").first()
-        if not existing:
-            db.session.add(ContainerRegistered(container_id="TEST-C1", weight=300, unit="kg"))
-        existing2 = ContainerRegistered.query.filter_by(container_id="TEST-C2").first()
-        if not existing2:
-            db.session.add(ContainerRegistered(container_id="TEST-C2", weight=200, unit="kg"))
+        db.session.remove()
+
+        # Ensure test containers exist
+        for cid, w in [("TEST-C1", 300), ("TEST-C2", 200)]:
+            if not ContainerRegistered.query.filter_by(container_id=cid).first():
+                db.session.add(ContainerRegistered(container_id=cid, weight=w, unit="kg"))
         db.session.commit()
+
+        # Capture the current max id — everything above this was created by the test
+        max_id = db.session.query(db.func.max(Transaction.id)).scalar() or 0
+
     yield
+
     with app.app_context():
-        Transaction.query.filter(Transaction.truck.like("TEST-%")).delete()
+        db.session.remove()
+        Transaction.query.filter(Transaction.id > max_id).delete()
         db.session.commit()
