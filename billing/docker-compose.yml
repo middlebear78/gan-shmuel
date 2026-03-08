@@ -3,11 +3,12 @@ services:
     image: mysql:8
     container_name: gan-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
       - gan_mysql_data:/var/lib/mysql
+      - ./db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   gan_mysql_data:
