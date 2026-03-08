@@ -1,14 +1,31 @@
 services:
   mysql:
     image: mysql:8
-    container_name: gan-mysql
+    container_name: billing-mysql
+    env_file:
+      - .env
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
-      - gan_mysql_data:/var/lib/mysql
+      - billing-mysql_data:/var/lib/mysql
       - ./db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  billing-app:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8080:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
 
 volumes:
   gan_mysql_data:
