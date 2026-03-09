@@ -294,6 +294,7 @@ def get_weight():
         result.append({
             "id": t.id,
             "direction": t.direction,
+            "truck": t.truck,
             "bruto": t.bruto,
             "neto": t.neto if t.neto is not None else "na",
             "produce": t.produce,
