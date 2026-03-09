@@ -19,3 +19,13 @@ class Rate(db.Model):
     product_id = db.Column(db.String(50), primary_key=True)
     scope = db.Column(db.String(50), primary_key=True)
     rate = db.Column(db.Integer, nullable=False, default=0)
+
+
+class RatesFile(db.Model):
+    __tablename__ = 'RatesFile'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    filename = db.Column(db.String(255), nullable=False)
+
+    def __init__(self, filename):
+        self.filename = filename
