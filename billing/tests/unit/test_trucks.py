@@ -17,7 +17,7 @@ def test_create_truck_success(client):
     data = response.get_json()
     assert data["id"] == "111-22-333"
     
-    saved_truck = Truck.query.get("111-22-333")
+    saved_truck = db.session.get(Truck, "111-22-333")
     assert saved_truck is not None
     assert saved_truck.provider_id == provider_id
 
