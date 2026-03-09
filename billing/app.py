@@ -7,6 +7,7 @@ from routes.provider_routes import provider_bp
 from routes.healthCheck_route import health_bp
 from routes.rates_route import rates_bp
 from routes.truck_routes import truck_bp
+from routes.bill_route import bill_bp
 
 CONFIGS = {
     "Config": Config,
@@ -23,6 +24,7 @@ def create_app(config_name="Config"):
     app.register_blueprint(provider_bp)
     app.register_blueprint(rates_bp)
     app.register_blueprint(truck_bp)
+    app.register_blueprint(bill_bp)
 
     return app
 
