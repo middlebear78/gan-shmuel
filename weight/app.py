@@ -1,7 +1,11 @@
 from flask import Flask, Response, request, jsonify
 from datetime import datetime
+import os
+import csv
+import json
+
 from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 from database import db
 from models import ContainerRegistered, Transaction
 import config
@@ -39,7 +43,75 @@ def parse_datetime_param(dt_str):
         return datetime.strptime(dt_str, "%Y%m%d%H%M%S")
     except (ValueError, TypeError):
         return None
+    
+def parse_csv(filepath):
+    """Parse a CSV file and return a list of (id, weight_in_kg) tuples."""
+    records = []
 
+    with open(filepath, "r") as f:
+        reader = csv.reader(f)
+        header = next(reader)
+
+        if header[0].strip().lower() != "id":
+            raise ValueError(f"unexpected first column: '{header[0]}', expected 'id'")
+
+        unit = header[1].strip().lower()
+
+        if unit not in ("kg", "lbs"):
+            raise ValueError(f"unsupported unit in header: '{header[1]}'")
+
+        for i, row in enumerate(reader, start=2):
+            if len(row) < 2:
+                raise ValueError(f"row {i}: expected 2 columns, got {len(row)}")
+
+            container_id = row[0].strip()
+
+            if not container_id:
+                raise ValueError(f"row {i}: missing container id")
+            
+            if not row[1].strip():
+                raise ValueError(f"row {i}: missing weight value")
+
+            weight = int(row[1].strip())
+
+            if unit == "lbs":
+                weight = lbs_to_kg(weight)
+
+            records.append((container_id, weight))
+
+    return records
+
+
+def parse_json(filepath):
+    """Parse a JSON file and return a list of (id, weight_in_kg) tuples."""
+    with open(filepath, "r") as f:
+        data = json.load(f)
+
+    if not isinstance(data, list):
+        raise ValueError("expected a JSON array")
+
+    records = []
+    for i, item in enumerate(data):
+        if "id" not in item or "weight" not in item:
+            raise ValueError(f"item {i}: missing 'id' or 'weight' field")
+
+        container_id = item["id"]
+
+        if not container_id:
+            raise ValueError(f"item {i}: empty 'id' field")
+        
+        if item["weight"] is None:
+            raise ValueError(f"item {i}: missing weight value")
+
+        weight = int(item["weight"])
+
+        unit = item.get("unit", "kg")
+        if unit == "lbs":
+            weight = lbs_to_kg(weight)
+
+        records.append((container_id, weight))
+
+    return records
 
 # --- Business logic helpers ---
 
@@ -229,6 +301,50 @@ def get_weight():
         })
 
     return jsonify(result), 200
+
+@app.post("/batch-weight")
+def post_batch_weight():
+    data = request.get_json(silent=True) or request.form.to_dict()
+    filename = data.get("file")
+
+    if not filename:
+        return jsonify({"error": "missing required field: file"}), 400
+
+    filepath = os.path.join("in", filename)
+
+    if not os.path.exists(filepath):
+        return jsonify({"error": f"file not found: {filename}"}), 404
+    
+    # 1. Parse the file
+    try:
+        if filename.endswith(".csv"):
+            records = parse_csv(filepath)
+        elif filename.endswith(".json"):
+            records = parse_json(filepath)
+        else:
+            return jsonify({"error": "unsupported file format, expected .csv or .json"}), 400
+    except Exception as e:
+        return jsonify({"error": f"failed to parse file: {str(e)}"}), 400
+
+    # 2. Upsert each record into containers_registered
+    for container_id, weight_kg in records:
+        existing = ContainerRegistered.query.filter_by(container_id=container_id).first()
+
+        if existing:
+            existing.weight = weight_kg
+            existing.unit = "kg"
+        else:
+            new_container = ContainerRegistered(
+                container_id=container_id,
+                weight=weight_kg,
+                unit="kg"
+            )
+            db.session.add(new_container)
+
+    db.session.commit()
+
+    return jsonify({"message": f"processed {len(records)} records"}), 200
+
 
 
 @app.get("/session/<session_id>")
