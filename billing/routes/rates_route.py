@@ -1,7 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 import os
 from openpyxl import load_workbook
-from models import db, Provider, Rate
+from models import db, Provider, Rate, RatesFile
 
 rates_bp = Blueprint("rates_bp", __name__)
 
@@ -10,17 +10,18 @@ IN_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "in")
 
 def _normalize_scope(scope_raw: str) -> str:
     s = (scope_raw or "").strip()
+
     if not s:
         raise ValueError("Scope is required")
 
     if s.upper() == "ALL":
         return "ALL"
 
-    # must be provider id
     if not s.isdigit():
         raise ValueError(f"Scope must be 'ALL' or provider id. Got '{s}'")
 
     provider_id = int(s)
+
     if Provider.query.get(provider_id) is None:
         raise ValueError(f"Provider id in Scope does not exist: {provider_id}")
 
@@ -44,19 +45,22 @@ def _read_rates_excel(filename: str):
 
     col_idx = {name: i for i, name in enumerate(header)}
     required = ["Product", "Rate", "Scope"]
+
     for col in required:
         if col not in col_idx:
             raise ValueError(f"missing column '{col}' in excel")
 
     rows = []
+
     for r in ws.iter_rows(min_row=2, values_only=True):
         product = r[col_idx["Product"]]
         rate_val = r[col_idx["Rate"]]
         scope = r[col_idx["Scope"]]
 
         product = str(product).strip() if product is not None else ""
+
         if not product:
-            continue  # skip empty rows
+            continue
 
         try:
             rate_int = int(rate_val)
@@ -68,7 +72,11 @@ def _read_rates_excel(filename: str):
 
         scope_norm = _normalize_scope(str(scope) if scope is not None else "")
 
-        rows.append({"product_id": product, "rate": rate_int, "scope": scope_norm})
+        rows.append({
+            "product_id": product,
+            "rate": rate_int,
+            "scope": scope_norm
+        })
 
     if not rows:
         raise ValueError("No valid rate rows found in excel")
@@ -79,9 +87,9 @@ def _read_rates_excel(filename: str):
 @rates_bp.route("/rates", methods=["POST"])
 def post_rates():
     """
-    Spec: file= Will upload new rates from an excel file in "/in" folder.
-    Columns: Product, Rate (integer agorot), Scope (ALL or provider id).
-    New rates overwrite old ones (by product_id+scope).
+    file = excel filename that already exists in /in
+    Reads Product, Rate, Scope from excel and updates Rates table.
+    Also saves the latest uploaded file name for GET /rates.
     """
     data = request.get_json(silent=True) or {}
     filename = data.get("file") or request.form.get("file")
@@ -106,12 +114,21 @@ def post_rates():
                     existing.rate = row["rate"]
                     updated += 1
             else:
-                db.session.add(Rate(
+                new_rate = Rate(
                     product_id=row["product_id"],
                     scope=row["scope"],
                     rate=row["rate"]
-                ))
+                )
+                db.session.add(new_rate)
                 inserted += 1
+
+        # save the latest uploaded file name
+        latest_file = RatesFile.query.first()
+
+        if latest_file:
+            latest_file.filename = safe_name
+        else:
+            db.session.add(RatesFile(filename=safe_name))
 
         db.session.commit()
 
@@ -125,8 +142,41 @@ def post_rates():
 
     except FileNotFoundError as e:
         return jsonify({"error": "file not found", "details": str(e)}), 404
+
     except ValueError as e:
         return jsonify({"error": "bad input", "details": str(e)}), 400
+
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": "server error", "details": str(e)}), 500
+
+
+@rates_bp.route("/rates", methods=["GET"])
+def get_rates():
+    """
+    Returns the same excel file that was last uploaded using POST /rates
+    """
+    try:
+        latest_file = RatesFile.query.first()
+
+        if latest_file is None:
+            return jsonify({"error": "no rates file uploaded yet"}), 404
+
+        safe_name = os.path.basename(latest_file.filename)
+        path = os.path.join(IN_DIR, safe_name)
+
+        if not os.path.exists(path):
+            return jsonify({
+                "error": "rates file record exists but file is missing",
+                "file": safe_name
+            }), 404
+
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name=safe_name,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception as e:
         return jsonify({"error": "server error", "details": str(e)}), 500
