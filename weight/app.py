@@ -294,6 +294,7 @@ def get_weight():
         result.append({
             "id": t.id,
             "direction": t.direction,
+            "truck": t.truck,
             "bruto": t.bruto,
             "neto": t.neto if t.neto is not None else "na",
             "produce": t.produce,
@@ -381,6 +382,80 @@ def get_session(session_id):
         }), 200
 
     return jsonify({"error": "session not found"}), 404
+
+@app.get('/item/<id>')
+def get_item(id):
+    now = datetime.now()
+    default_t1 = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    from_str = request.args.get("from")
+    to_str = request.args.get("to")
+
+
+    dt_from = parse_datetime_param(from_str) if from_str else default_t1
+    dt_to = parse_datetime_param(to_str) if to_str else now
+
+    if dt_from is None or dt_to is None:
+        return jsonify({"error": "invalid datetime format, expected yyyymmddhhmmss"}), 400
+
+    item_type = None
+    tara_weight = "na"
+    
+    container = ContainerRegistered.query.filter_by(container_id=id).first()
+    if container:
+        item_type = "container"
+        if container.weight is not None:
+            tara_weight = container.weight
+            if container.unit == "lbs":
+                tara_weight = lbs_to_kg(tara_weight)
+        
+                
+    else:
+        truck_exists = Transaction.query.filter_by(truck=id).first()
+        if truck_exists:
+            item_type = "truck"
+            last_out_tx = Transaction.query.filter(
+                Transaction.truck == id, 
+                Transaction.direction == "out",
+                Transaction.truckTara.isnot(None)
+            ).order_by(Transaction.datetime.desc()).first()
+            
+            if last_out_tx:
+                tara_weight = last_out_tx.truckTara
+                
+    if not item_type:
+        return jsonify({"error": "Item not found"}), 404
+
+    sessions = set()
+    
+    if item_type == "truck":
+        truck_transactions = Transaction.query.filter(
+            Transaction.truck == id,
+            Transaction.datetime >= dt_from,
+            Transaction.datetime <= dt_to
+        ).all()
+        
+        for t in truck_transactions:
+            if t.session_id is not None:
+                sessions.add(t.session_id)
+        
+    elif item_type == "container":
+        all_transactions_in_range = Transaction.query.filter(
+            Transaction.datetime >= dt_from,
+            Transaction.datetime <= dt_to
+        ).all()
+        
+        for t in all_transactions_in_range:
+            if t.containers:
+                container_list = [c.strip() for c in t.containers.split(",")]
+                if id in container_list and t.session_id is not None:
+                    sessions.add(t.session_id)
+
+    return jsonify({
+        "id": id,
+        "tara": tara_weight,
+        "sessions": list(sessions)
+    }), 200 
 
 
 if __name__ == "__main__":
