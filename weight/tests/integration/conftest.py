@@ -2,7 +2,7 @@ import pytest
 from app import app
 from database import db
 from models import Transaction, ContainerRegistered
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 @pytest.fixture(autouse=True)
@@ -12,16 +12,8 @@ def client():
     with app.app_context():
         db.session.remove()
 
-        # Ensure test containers exist
-        for cid, w in [("TEST-C1", 300), ("TEST-C2", 200)]:
-            if not ContainerRegistered.query.filter_by(container_id=cid).first():
-                db.session.add(ContainerRegistered(container_id=cid, weight=w, unit="kg"))
-        db.session.commit()
-
         max_id = db.session.query(db.func.max(Transaction.id)).scalar() or 0
         existing_containers = {c.container_id for c in ContainerRegistered.query.all()}
-
-        
 
         # --- Containers ---
         containers_to_add = [
@@ -41,7 +33,7 @@ def client():
         now = datetime.now()
         current_month = now.replace(day=5) 
         # Safely calculate last month and last year
-        last_month = now.replace(month=now.month-1 if now.month > 1 else 12, day=20, year=now.year if now.month > 1 else now.year - 1)
+        last_month = (now.replace(day=1) - timedelta(days=1)).replace(day=20)
         last_year = now.replace(year=now.year-1, month=6, day=15)
         
         # --- Transactions ---
@@ -65,7 +57,6 @@ def client():
             {"datetime": last_year, "direction": "in", "truck": "T-888", "containers": "C-101", "bruto": 16000, "session_id": 5},
             {"datetime": last_year, "direction": "out", "truck": "T-888", "containers": "C-101", "bruto": 16000, "truckTara": 6000, "session_id": 5},
 
-            
             # NEW Session 6: Historical data for T-123 (Last Year)
             {"datetime": last_year, "direction": "in", "truck": "T-789", "containers": "C-101", "bruto": 20000, "session_id": 6},
             {"datetime": last_year, "direction": "out", "truck": "T-789", "containers": "C-101", "bruto": 20000, "truckTara": 5100, "session_id": 6}
