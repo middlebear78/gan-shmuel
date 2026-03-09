@@ -382,6 +382,30 @@ def get_session(session_id):
 
     return jsonify({"error": "session not found"}), 404
 
+@app.get("/unknown")
+def get_unknown():
+    seen = set()
+    unknown = []
+
+    transactions = Transaction.query.all()
+
+    for transaction in transactions:
+        container_ids = parse_containers(transaction.containers)
+
+        for cid in container_ids:
+            cid = cid.strip()
+
+            if not cid or cid in seen:
+                continue
+
+            seen.add(cid)
+
+            container = ContainerRegistered.query.filter_by(container_id=cid).first()
+
+            if container is None or container.weight is None:
+                unknown.append(cid)
+
+    return jsonify(unknown), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
