@@ -16,9 +16,9 @@ def new_truck():
     provider_id = data.get("provider")
     if not truck_id or not provider_id:
          return jsonify({"error": "Truck id and provider are required"}), 400
-    if Provider.query.get(provider_id)==None:
+    if db.session.get(Provider, provider_id) is None:
           return jsonify({"error": f"Provider: {provider_id} does not exist" }), 404
-    if Truck.query.get(truck_id)is not None:
+    if db.session.get(Truck, truck_id) is not None:
           return jsonify({"error": f"Truck '{truck_id}' already exists"}), 409
     new_truck = Truck(id=truck_id,provider_id=provider_id)
     db.session.add(new_truck)
@@ -31,9 +31,9 @@ def update_truck(truck_id):
     provider_id = data.get("provider")
     if not provider_id:
         return jsonify({"error": "provider is required"}), 400
-    if Provider.query.get(provider_id) is None:
+    if db.session.get(Provider, provider_id) is None:
         return jsonify({"error": f"Provider: {provider_id} does not exist" }), 404
-    truck = Truck.query.get(truck_id)
+    truck = db.session.get(Truck, truck_id)
     if truck is None:
         return jsonify({"error": f"Truck: {truck_id} does not exist" }), 404
     truck.provider_id = provider_id
@@ -42,8 +42,11 @@ def update_truck(truck_id):
 
 @truck_bp.route("/truck/<string:truck_id>", methods=["GET"])
 def data_about_truck(truck_id):
-    t1,t2=get_time_range()
-    truck = Truck.query.get(truck_id)
+    try:
+        t1,t2=get_time_range()
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Expected YYYYMMDDHHMMSS"}), 400
+    truck = db.session.get(Truck, truck_id)
     if truck is None:
         return jsonify({"error": f"Truck: {truck_id} does not exist" }), 404
     tara = "na"
@@ -61,6 +64,8 @@ def data_about_truck(truck_id):
         print(f"Warning: Could not connect to Weight server: {e}")
     return jsonify({
             "id": truck.id,
+            "from": t1,
+            "to": t2,
             "tara": tara,
             "sessions":sessions}), 200
 
@@ -76,12 +81,8 @@ def get_time_range():
     def validate_or_default(value, default):
             if not value:
                 return default
-            try:
-                datetime.strptime(value, '%Y%m%d%H%M%S')
-                return value
-            except ValueError:
-               
-                return default
+            datetime.strptime(value, '%Y%m%d%H%M%S')
+            return value
     t1 = validate_or_default(request.args.get('from'), default_t1)
     t2 = validate_or_default(request.args.get('to'), default_t2)
     return t1,t2
