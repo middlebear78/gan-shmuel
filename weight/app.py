@@ -386,26 +386,29 @@ def get_session(session_id):
 
 @app.get("/unknown")
 def get_unknown():
-    seen = set()
-    unknown = []
-
     transactions = Transaction.query.all()
 
+    all_cids = []
+    seen = set()
+
     for transaction in transactions:
-        container_ids = parse_containers(transaction.containers)
-
-        for cid in container_ids:
+        for cid in parse_containers(transaction.containers):
             cid = cid.strip()
+            if cid and cid not in seen:
+                seen.add(cid)
+                all_cids.append(cid)
 
-            if not cid or cid in seen:
-                continue
+    if not all_cids:
+        return jsonify([]), 200
 
-            seen.add(cid)
+    known = ContainerRegistered.query.filter(
+        ContainerRegistered.container_id.in_(all_cids),
+        ContainerRegistered.weight.isnot(None)
+    ).all()
 
-            container = ContainerRegistered.query.filter_by(container_id=cid).first()
+    known_ids = {container.container_id for container in known}
 
-            if container is None or container.weight is None:
-                unknown.append(cid)
+    unknown = [cid for cid in all_cids if cid not in known_ids]
 
     return jsonify(unknown), 200
 

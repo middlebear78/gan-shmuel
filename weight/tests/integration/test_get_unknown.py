@@ -1,11 +1,16 @@
-# --- Basic tests ---
+ # --- Basic tests ---
 
-def test_get_unknown_empty(client):
-    """Should return an empty list when no unknown containers were recorded."""
+def test_get_unknown_returns_fixture_unknowns(client):
+    """Before creating new transactions, fixture unknown containers should appear."""
     res = client.get("/unknown")
-    assert res.status_code == 200
-    assert res.get_json() == []
 
+    assert res.status_code == 200
+
+    data = res.get_json()
+
+    assert "C-103" in data
+    assert "C-101" not in data
+    assert "C-102" not in data
 
 # --- Unknown container detection tests ---
 
