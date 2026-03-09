@@ -15,9 +15,12 @@
 #   docker compose -f docker-compose.prod.yml up --build -d
 #
 # Ports exposed on the host:
-#   - 80   → weight app
-#   - 8090 → billing app
+#   - 8080 → weight app
+#   - 8081 → billing app
 #   (DB ports are NOT exposed — only accessible inside Docker)
+#
+# NOTE: Staging/E2E uses ports 80 and 8090 so there is
+# NO conflict when both are running on the same EC2.
 # ----------------------------------------------------
 
 services:
@@ -47,7 +50,7 @@ services:
 
   # ---- weight app ----
   # Flask app serving the weight API on port 5000 inside
-  # the container, mapped to port 80 on the host.
+  # the container, mapped to port 8080 on the host.
   # Waits for weight-db to be healthy before starting.
   weight-app:
     build:
@@ -59,7 +62,7 @@ services:
     environment:
       DB_HOSTNAME: weight-db
     ports:
-      - "80:5000"
+      - "8080:5000"
     depends_on:
       weight-db:
         condition: service_healthy
@@ -88,7 +91,7 @@ services:
 
   # ---- billing app ----
   # Flask app serving the billing API on port 5000 inside
-  # the container, mapped to port 8090 on the host.
+  # the container, mapped to port 8081 on the host.
   # Talks to weight-app internally via Docker hostname.
   # Waits for billing-db to be healthy and weight-app to start.
   billing-app:
@@ -101,7 +104,7 @@ services:
       DB_HOST: billing-db
       WEIGHT_SERVER_URL: http://weight-app:5000
     ports:
-      - "8090:5000"
+      - "8081:5000"
     depends_on:
       billing-db:
         condition: service_healthy
