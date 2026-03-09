@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 import requests
+import os
 
 from models import db, Provider, Truck, Rate
 
-WEIGHT_API = "http://weight-service:5000"
+WEIGHT_API = os.getenv("WEIGHT_SERVER_URL")
 
 bill_bp = Blueprint("bill", __name__)
 
