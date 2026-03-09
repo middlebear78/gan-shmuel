@@ -1,0 +1,116 @@
+PRE-PUSH HOOK SETUP
+===================
+
+This hook runs unit and integration tests inside Docker before
+allowing a push to feature branches of app teams
+(e.g. weight/my-feature, billing/fix-bug, frontend/add-login).
+
+It does NOT trigger on the app branches themselves (weight, billing,
+frontend) — those are PR-protected and no one can push to them directly.
+
+REQUIREMENTS:
+  - Docker must be running on your machine
+  - A .env file must exist in your app folder (copy from .env.example)
+  - Tests must follow the exact folder structure below
+
+TEST FOLDER STRUCTURE:
+  The hook looks for tests in specific folder paths inside your
+  app folder. These names are exact — any other naming will be
+  silently skipped.
+
+  <your-app-folder>/
+  ├── tests/
+  │   ├── unit/           <- unit tests go here
+  │   └── integration/    <- integration tests go here
+
+  Examples:
+    weight/tests/unit/test_weight.py
+    billing/tests/integration/test_api.py
+
+  WRONG names (will be silently ignored):
+    tests/unit_tests/     <- wrong
+    tests/Units/          <- wrong
+    test/unit/            <- wrong ("test" instead of "tests")
+    unit_tests/           <- wrong (must be inside tests/)
+
+  The hook runs pytest on these folders inside the Docker container.
+  If a folder doesn't exist, the hook skips it and lets the push
+  through — so make sure your tests are in the right place.
+
+Step 1 - Get the hooks folder onto your branch (team lead does this once):
+
+  This folder lives on the devops branch. To bring it into your
+  team branch, run this from your branch. You don't need to switch
+  branches — this command reaches into the devops branch on the
+  remote and copies the hooks folder into your current branch.
+
+  IMPORTANT: Run all commands from the repo root folder, NOT from
+  inside your team's subfolder (e.g. weight/, billing/).
+  To find your repo root: git rev-parse --show-toplevel
+
+  git fetch origin devops
+  git checkout origin/devops -- hooks
+  git add hooks/
+  git commit -m "Add pre-push hook"
+
+  Then open a PR to merge this into your team branch (weight,
+  billing, or frontend). You cannot push directly — the branch
+  is protected.
+
+Step 2 - Every developer on the team (one time each):
+
+  git pull
+  ./hooks/setup.sh
+
+  This copies the hook into your local .git/hooks/ folder,
+  which is where Git looks for hooks. Git never syncs this
+  folder — that's why the copy is needed.
+
+Step 3 - Make sure you have a .env file:
+
+  The Docker containers need database credentials and other
+  settings to start. These are stored in a .env file inside
+  your app folder (e.g. weight/.env, billing/.env).
+
+  This file is NOT tracked by Git (it's in .gitignore) so you
+  won't get it from git pull. You create it yourself from the
+  template:
+
+  cd <your-app-folder>
+  cp .env.example .env
+
+  Then open .env and fill in the values (database name, password, etc).
+  Ask your team lead if you're not sure what to put.
+
+  The hook will refuse to run without this file.
+
+Done. The hook runs automatically on every push from now on.
+
+What it does:
+  - Push to a feature branch (e.g. weight/my-feature) →
+    Docker containers spin up, tests run, containers tear down
+  - Tests pass → push goes through
+  - Tests fail → push is blocked, fix locally and try again
+  - Push to any other branch → hook does nothing
+
+To skip the hook once (not recommended):
+  git push --no-verify
+
+TO REMOVE THE HOOK COMPLETELY:
+
+  For a single developer — removes it from your machine only:
+
+    rm .git/hooks/pre-push
+
+  For the whole team — team lead does this:
+
+    1. Go to the repo root folder
+    2. git rm -r hooks/
+    3. git commit -m "Remove pre-push hook"
+    4. Open a PR to your team branch and merge it
+    5. Tell every developer on your team to run:
+       rm .git/hooks/pre-push
+
+  Step 5 is required because deleting the folder from the branch
+  does NOT remove the hook from each developer's machine.
+  The hook lives in .git/hooks/ which Git never syncs.
