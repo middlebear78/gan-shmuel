@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mariadb:11.8
+    image: mariadb:10.11
     container_name: billing-mysql
     env_file:
       - .env
