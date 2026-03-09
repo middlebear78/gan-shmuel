@@ -42,7 +42,10 @@ def update_truck(truck_id):
 
 @truck_bp.route("/truck/<string:truck_id>", methods=["GET"])
 def data_about_truck(truck_id):
-    t1,t2=get_time_range()
+    try:
+        t1,t2=get_time_range()
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Expected YYYYMMDDHHMMSS"}), 400
     truck = db.session.get(Truck, truck_id)
     if truck is None:
         return jsonify({"error": f"Truck: {truck_id} does not exist" }), 404
@@ -61,6 +64,8 @@ def data_about_truck(truck_id):
         print(f"Warning: Could not connect to Weight server: {e}")
     return jsonify({
             "id": truck.id,
+            "from": t1,
+            "to": t2,
             "tara": tara,
             "sessions":sessions}), 200
 
@@ -76,12 +81,8 @@ def get_time_range():
     def validate_or_default(value, default):
             if not value:
                 return default
-            try:
-                datetime.strptime(value, '%Y%m%d%H%M%S')
-                return value
-            except ValueError:
-               
-                return default
+            datetime.strptime(value, '%Y%m%d%H%M%S')
+            return value
     t1 = validate_or_default(request.args.get('from'), default_t1)
     t2 = validate_or_default(request.args.get('to'), default_t2)
     return t1,t2
