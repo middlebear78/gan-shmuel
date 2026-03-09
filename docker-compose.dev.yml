@@ -1,0 +1,75 @@
+services:
+  weight-db:
+    build:
+      context: ./weight
+      dockerfile: Dockerfile.mysql.dev
+    environment:
+      MYSQL_DATABASE: weight
+      MYSQL_ROOT_PASSWORD: pass
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppass"]
+      start_period: 30s
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - weight-db-data:/var/lib/mysql
+
+  weight-app:
+    build:
+      context: ./weight
+      dockerfile: Dockerfile.weight.dev
+    environment:
+      DB_HOSTNAME: weight-db
+      DB_NAME: weight
+      DB_USER: root
+      DB_PASSWORD: pass
+    ports:
+      - "8080:5000"
+    depends_on:
+      weight-db:
+        condition: service_healthy
+
+  billing-db:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - billing-db-data:/var/lib/mysql
+      - ./billing/db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
+
+  billing-app:
+    build:
+      context: ./billing
+      dockerfile: Dockerfile
+    environment:
+      DB_USER: root
+      DB_PASSWORD: pass
+      DB_HOST: billing-db
+      DB_PORT: "3306"
+      DB_NAME: billing_db
+      WEIGHT_SERVER_URL: http://weight-app:5000
+    ports:
+      - "8081:5000"
+    depends_on:
+      billing-db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8082:80"
+    depends_on:
+      - weight-app
+      - billing-app
+
+volumes:
+  weight-db-data:
+  billing-db-data:
