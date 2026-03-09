@@ -38,17 +38,3 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `session_id` int DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=10001;
-
-show tables;
-
-describe containers_registered;
-describe transactions;
-
-
-
---
--- Dumping data for table `test`
---
-
--- INSERT INTO `test` (`id`, `aa`) VALUES
--- (1, 'aaaa'),
