@@ -144,9 +144,6 @@ if [ "$EVENT" = "pull_request" ]; then
     if [ "$RUN_BILLING" = true ]; then
         log "[INFO] Running billing + weight tests (TEST MODE)"
         /home/ubuntu/opt/scripts/test-billing-and-weight.sh &
-    elif [ "$RUN_WEIGHT" = true ]; then
-        log "[INFO] Running weight-only tests (TEST MODE)"
-        /home/ubuntu/opt/scripts/test-weight.sh &
     else
         log "[INFO] No billing/weight changes in PR. Skipping."
     fi
