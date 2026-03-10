@@ -34,7 +34,7 @@ const translations = {
     // new features
     weightList:'רשימת שקילות', from:'מתאריך', to:'עד תאריך', filter:'סינון',
     load:'טען', noResults:'אין תוצאות', id:'מזהה',
-    batchWeight:'טעינת משקלים', fileName:'שם קובץ', fileNamePlaceholder:'שם קובץ (למשל containers1.csv)', selectFile:'בחר קובץ...',
+    batchWeight:'טעינת משקלים', fileName:'שם קובץ', fileNamePlaceholder:'שם קובץ (למשל containers1.csv)',
     upload:'העלה', batchSuccess:'הקובץ עובד בהצלחה', processed:'רשומות עובדו',
     itemLookup:'חיפוש פריט', itemId:'מזהה פריט', itemIdPlaceholder:'מזהה מכולה או משאית',
     ratesFileName:'שם קובץ אקסל', ratesFilePlaceholder:'שם קובץ (למשל rates.xlsx)',
@@ -80,7 +80,7 @@ const translations = {
     // new features
     weightList:'Weight List', from:'From', to:'To', filter:'Filter',
     load:'Load', noResults:'No results', id:'ID',
-    batchWeight:'Batch Weight', fileName:'File Name', fileNamePlaceholder:'Filename (e.g. containers1.csv)', selectFile:'Select file...',
+    batchWeight:'Batch Weight', fileName:'File Name', fileNamePlaceholder:'Filename (e.g. containers1.csv)',
     upload:'Upload', batchSuccess:'File processed successfully', processed:'records processed',
     itemLookup:'Item Lookup', itemId:'Item ID', itemIdPlaceholder:'Container or truck ID',
     ratesFileName:'Excel File Name', ratesFilePlaceholder:'Filename (e.g. rates.xlsx)',

@@ -293,32 +293,13 @@ function setupItemLookup() {
   });
 }
 
-// ── Helper: populate a <select> with file names ──
-async function loadFileOptions(selectId, fetchFn) {
-  const select = document.getElementById(selectId);
-  try {
-    const files = await fetchFn();
-    // remove old options except the first placeholder
-    while (select.options.length > 1) select.remove(1);
-    files.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f;
-      opt.textContent = f;
-      select.appendChild(opt);
-    });
-  } catch { /* silently fail — dropdown stays with placeholder */ }
-}
-
 // ── Weight: Batch Weight ──
 function setupBatchWeight() {
   const btn = document.getElementById('batch-upload-btn');
   const result = document.getElementById('batch-result');
 
-  // load file list on init
-  loadFileOptions('batch-file-input', getWeightFiles);
-
   btn.addEventListener('click', async () => {
-    const filename = document.getElementById('batch-file-input').value;
+    const filename = document.getElementById('batch-file-input').value.trim();
     if (!filename) return;
     result.innerHTML = '';
     btnLoading(btn, true);
@@ -391,11 +372,8 @@ function setupRates() {
   const uploadBtn = document.getElementById('rates-upload-btn');
   const uploadResult = document.getElementById('rates-upload-result');
 
-  // load file list on init
-  loadFileOptions('rates-file-input', getBillingFiles);
-
   uploadBtn.addEventListener('click', async () => {
-    const filename = document.getElementById('rates-file-input').value;
+    const filename = document.getElementById('rates-file-input').value.trim();
     if (!filename) return;
     uploadResult.innerHTML = '';
     btnLoading(uploadBtn, true);

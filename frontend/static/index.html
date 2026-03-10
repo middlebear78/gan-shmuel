@@ -219,9 +219,7 @@
               <div class="card-body">
                 <div class="form-group">
                   <label class="form-label" data-t="fileName">שם קובץ</label>
-                  <select class="form-select" id="batch-file-input">
-                    <option value="" data-t="selectFile">בחר קובץ...</option>
-                  </select>
+                  <input class="form-input" id="batch-file-input" data-t-placeholder="fileNamePlaceholder">
                 </div>
                 <button class="btn btn-primary" id="batch-upload-btn" data-t="upload">העלה</button>
                 <div id="batch-result"></div>
@@ -273,9 +271,7 @@
                   <div class="card-body">
                     <div class="form-group">
                       <label class="form-label" data-t="ratesFileName">שם קובץ אקסל</label>
-                      <select class="form-select" id="rates-file-input">
-                        <option value="" data-t="selectFile">בחר קובץ...</option>
-                      </select>
+                      <input class="form-input" id="rates-file-input" data-t-placeholder="ratesFilePlaceholder">
                     </div>
                     <button class="btn btn-primary" id="rates-upload-btn" data-t="upload">העלה</button>
                     <div id="rates-upload-result"></div>
