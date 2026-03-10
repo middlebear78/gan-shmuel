@@ -2,6 +2,29 @@
 
 let isLoggedIn = false;
 
+// ── Convert datetime-local value to API format (yyyymmddhhmmss) ──
+function datetimeLocalToApi(value) {
+  if (!value) return '';
+  return value.replace(/[-T:]/g, '') + '00';
+}
+
+// ── Wire up "Today" buttons ──
+function setupTodayButtons() {
+  document.querySelectorAll('.btn-today').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [fromId, toId] = btn.dataset.today.split(',');
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const h = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById(fromId).value = `${y}-${m}-${d}T00:00`;
+      document.getElementById(toId).value = `${y}-${m}-${d}T${h}:${min}`;
+    });
+  });
+}
+
 // ── Toast (slide-in/out) ──
 function showToast(msg, type) {
   const toast = document.getElementById('toast');
@@ -85,13 +108,16 @@ function descTable(rows) {
 function loadHealthChecks() {
   const container = document.getElementById('health-cards');
   const services = [
-    { key: 'weightService', url: '/api/weight/health', port: 5000 },
-    { key: 'billingService', url: '/api/billing/health', port: 5001 },
+    { key: 'weightService', url: '/api/weight/health' },
+    { key: 'billingService', url: '/api/billing/health' },
   ];
   container.innerHTML = services.map(svc =>
     `<div class="status-card" id="health-${svc.key}">
-      <div><h3>${t(svc.key)}</h3><span class="port">${t('port')} ${svc.port}</span></div>
-      <span class="tag tag-default">${t('checking')}</span>
+      <h3>${t(svc.key)}</h3>
+      <div class="health-rows">
+        <div class="health-row"><span>${t('service')}</span><span class="tag tag-default">${t('checking')}</span></div>
+        <div class="health-row"><span>${t('database')}</span><span class="tag tag-default">${t('checking')}</span></div>
+      </div>
     </div>`
   ).join('');
 
@@ -99,20 +125,30 @@ function loadHealthChecks() {
     checkHealth(svc.url)
       .then(result => {
         const card = document.getElementById('health-' + svc.key);
-        const tag = card.querySelector('.tag');
-        if (result.ok) {
-          tag.className = 'tag tag-success';
-          tag.textContent = '✓ ' + t('online');
-          card.classList.remove('offline');
-          card.classList.add('online');
-        } else { throw new Error(); }
+        const tags = card.querySelectorAll('.tag');
+        // Service status
+        tags[0].className = 'tag tag-success';
+        tags[0].textContent = '✓ ' + t('online');
+        // DB status
+        if (result.db === true) {
+          tags[1].className = 'tag tag-success';
+          tags[1].textContent = '✓ ' + t('online');
+        } else if (result.db === false) {
+          tags[1].className = 'tag tag-error';
+          tags[1].textContent = '✗ ' + t('offline');
+        } else {
+          tags[1].className = 'tag tag-default';
+          tags[1].textContent = t('na');
+        }
+        card.classList.add('online');
       })
       .catch(() => {
         const card = document.getElementById('health-' + svc.key);
-        const tag = card.querySelector('.tag');
-        tag.className = 'tag tag-error';
-        tag.textContent = '✗ ' + t('offline');
-        card.classList.remove('online');
+        const tags = card.querySelectorAll('.tag');
+        tags[0].className = 'tag tag-error';
+        tags[0].textContent = '✗ ' + t('offline');
+        tags[1].className = 'tag tag-error';
+        tags[1].textContent = '✗ ' + t('offline');
         card.classList.add('offline');
       });
   });
@@ -165,6 +201,40 @@ function setupWeightForm() {
   });
 }
 
+// ── Weight: List Transactions ──
+function setupWeightList() {
+  const btn = document.getElementById('wl-load-btn');
+  const result = document.getElementById('wl-result');
+
+  btn.addEventListener('click', async () => {
+    const from = datetimeLocalToApi(document.getElementById('wl-from').value);
+    const to = datetimeLocalToApi(document.getElementById('wl-to').value);
+    const filter = document.getElementById('wl-filter').value;
+    result.innerHTML = '';
+    btnLoading(btn, true);
+    try {
+      const data = await getWeightList(from, to, filter);
+      if (!data || data.length === 0) {
+        result.innerHTML = `<div class="empty">${t('noResults')}</div>`;
+      } else {
+        let html = '<table class="data-table"><thead><tr>';
+        html += `<th>${t('id')}</th><th>${t('direction')}</th><th>${t('truck')}</th>`;
+        html += `<th>${t('bruto')}</th><th>${t('neto')}</th><th>${t('produce')}</th><th>${t('containers')}</th>`;
+        html += '</tr></thead><tbody>';
+        data.forEach(row => {
+          const neto = row.neto === 'na' ? 'N/A' : row.neto;
+          const containers = Array.isArray(row.containers) ? row.containers.join(', ') : (row.containers || '');
+          html += `<tr><td>${row.id}</td><td>${row.direction}</td><td>${row.truck}</td>`;
+          html += `<td>${row.bruto}</td><td>${neto}</td><td>${row.produce}</td><td>${containers}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        result.innerHTML = html;
+      }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
+    finally { btnLoading(btn, false); }
+  });
+}
+
 // ── Weight: Session Lookup ──
 function setupSessionLookup() {
   const input = document.getElementById('session-id-input');
@@ -196,6 +266,56 @@ function setupSessionLookup() {
 
   btn.addEventListener('click', lookup);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+}
+
+// ── Weight: Item Lookup ──
+function setupItemLookup() {
+  const btn = document.getElementById('item-search-btn');
+  const result = document.getElementById('item-result');
+
+  btn.addEventListener('click', async () => {
+    const id = document.getElementById('item-id-input').value.trim();
+    if (!id) return;
+    const from = datetimeLocalToApi(document.getElementById('item-from').value);
+    const to = datetimeLocalToApi(document.getElementById('item-to').value);
+    result.innerHTML = '';
+    btnLoading(btn, true);
+    try {
+      const data = await getItem(id, from, to);
+      if (!data) {
+        result.innerHTML = `<div class="empty">${t('notFound')}</div>`;
+      } else {
+        const sessionsHtml = data.sessions?.length > 0
+          ? data.sessions.map(s => `<span class="tag tag-info">${s}</span> `).join('')
+          : '—';
+        result.innerHTML = descTable([
+          [t('id'), data.id],
+          [t('tara'), data.tara === 'na' ? 'N/A' : data.tara + ' kg'],
+          [t('sessions'), sessionsHtml],
+        ]);
+      }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
+    finally { btnLoading(btn, false); }
+  });
+}
+
+// ── Weight: Batch Weight ──
+function setupBatchWeight() {
+  const btn = document.getElementById('batch-upload-btn');
+  const result = document.getElementById('batch-result');
+
+  btn.addEventListener('click', async () => {
+    const filename = document.getElementById('batch-file-input').value.trim();
+    if (!filename) return;
+    result.innerHTML = '';
+    btnLoading(btn, true);
+    try {
+      const data = await batchWeight(filename);
+      showToast(t('batchSuccess'), 'success');
+      result.innerHTML = descTable([[t('processed'), data.message || JSON.stringify(data)]]);
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
+    finally { btnLoading(btn, false); }
+  });
 }
 
 // ── Weight: Unknown Containers ──
@@ -250,6 +370,93 @@ function setupTruckBill() {
 
   btn.addEventListener('click', lookup);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+}
+
+// ── Billing: Rates ──
+function setupRates() {
+  // Upload
+  const uploadBtn = document.getElementById('rates-upload-btn');
+  const uploadResult = document.getElementById('rates-upload-result');
+
+  uploadBtn.addEventListener('click', async () => {
+    const filename = document.getElementById('rates-file-input').value.trim();
+    if (!filename) return;
+    uploadResult.innerHTML = '';
+    btnLoading(uploadBtn, true);
+    try {
+      const data = await uploadRates(filename);
+      showToast(t('ratesUploaded'), 'success');
+      uploadResult.innerHTML = descTable([
+        [t('rows'), data.rows],
+        [t('inserted'), data.inserted],
+        [t('updated'), data.updated],
+      ]);
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
+    finally { btnLoading(uploadBtn, false); }
+  });
+
+  // Download
+  const downloadBtn = document.getElementById('rates-download-btn');
+  const downloadResult = document.getElementById('rates-download-result');
+
+  downloadBtn.addEventListener('click', async () => {
+    downloadResult.innerHTML = '';
+    btnLoading(downloadBtn, true);
+    try {
+      const blob = await downloadRates();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rates.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
+    finally { btnLoading(downloadBtn, false); }
+  });
+}
+
+// ── Billing: Provider Bill ──
+function setupBill() {
+  const btn = document.getElementById('bill-generate-btn');
+  const result = document.getElementById('bill-result');
+
+  btn.addEventListener('click', async () => {
+    const providerId = document.getElementById('bill-provider-input').value.trim();
+    if (!providerId) return;
+    const from = datetimeLocalToApi(document.getElementById('bill-from').value);
+    const to = datetimeLocalToApi(document.getElementById('bill-to').value);
+    result.innerHTML = '';
+    btnLoading(btn, true);
+    try {
+      const data = await getBill(providerId, from, to);
+      if (!data) {
+        result.innerHTML = `<div class="empty">${t('notFound')}</div>`;
+      } else {
+        let html = descTable([
+          [t('providerId'), data.id],
+          [t('providerName'), data.name],
+          [t('from'), data.from],
+          [t('to'), data.to],
+          [t('truckCount'), data.truckCount],
+          [t('sessionCount'), data.sessionCount],
+        ]);
+        if (data.products && data.products.length > 0) {
+          html += '<table class="data-table" style="margin-top:12px"><thead><tr>';
+          html += `<th>${t('product')}</th><th>${t('count')}</th><th>${t('amount')}</th><th>${t('rate')}</th><th>${t('pay')}</th>`;
+          html += '</tr></thead><tbody>';
+          data.products.forEach(p => {
+            html += `<tr><td>${p.product}</td><td>${p.count}</td><td>${p.amount}</td><td>${p.rate}</td><td>${p.pay}</td></tr>`;
+          });
+          html += '</tbody></table>';
+        } else {
+          html += `<div class="empty" style="margin-top:12px">${t('noData')}</div>`;
+        }
+        html += descTable([[t('total'), data.total]]);
+        result.innerHTML = html;
+      }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
+    finally { btnLoading(btn, false); }
+  });
 }
 
 // ── Management: Providers ──
@@ -393,10 +600,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup everything
   setupTabs();
+  setupTodayButtons();
   setupWeightForm();
+  setupWeightList();
   setupSessionLookup();
+  setupItemLookup();
+  setupBatchWeight();
   setupUnknownContainers();
   setupTruckBill();
+  setupRates();
+  setupBill();
   setupProviders();
   setupTrucks();
   setupLogin();

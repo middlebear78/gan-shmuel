@@ -2,4 +2,4 @@ services:
   frontend:
     build: .
     ports:
-      - "8080:5000"
+      - "8082:5000"

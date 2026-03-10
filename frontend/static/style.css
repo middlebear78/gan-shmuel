@@ -202,6 +202,12 @@ body {
 .btn-block { width: 100%; justify-content: center; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.btn-today {
+  font-size: 12px; padding: 4px 12px; margin-inline-end: 8px;
+  background: var(--secondary); border-color: var(--primary); color: var(--primary);
+}
+.btn-today:hover { background: var(--primary); color: #fff; }
+
 .inline-search { display: flex; gap: 8px; }
 .inline-search .form-input { flex: 1; }
 

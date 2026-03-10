@@ -54,7 +54,10 @@
           <h1 class="page-title" data-t="weightNav">שקילה</h1>
           <div class="tabs-nav">
             <button class="tab-btn active" data-tab="wt-record" data-t="recordWeight">רישום שקילה</button>
+            <button class="tab-btn" data-tab="wt-list" data-t="weightList">רשימת שקילות</button>
             <button class="tab-btn" data-tab="wt-session" data-t="sessionLookup">חיפוש שקילה</button>
+            <button class="tab-btn" data-tab="wt-item" data-t="itemLookup">חיפוש פריט</button>
+            <button class="tab-btn" data-tab="wt-batch" data-t="batchWeight">טעינת משקלים</button>
             <button class="tab-btn" data-tab="wt-unknown" data-t="unknownContainers">מכולות ללא משקל ידוע</button>
           </div>
 
@@ -126,6 +129,43 @@
             </div>
           </div>
 
+          <!-- Weight List -->
+          <div class="tab-content" id="wt-list">
+            <div class="card">
+              <div class="card-header" data-t="weightList">רשימת שקילות</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="from">מתאריך</label>
+                      <input class="form-input" id="wl-from" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="to">עד תאריך</label>
+                      <input class="form-input" id="wl-to" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="filter">סינון</label>
+                      <select class="form-select" id="wl-filter">
+                        <option value="in,out,none">in, out, none</option>
+                        <option value="in">in</option>
+                        <option value="out">out</option>
+                        <option value="none">none</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-today" data-today="wl-from,wl-to" data-t="today">היום</button>
+                <button class="btn btn-primary" id="wl-load-btn" data-t="load">טען</button>
+                <div id="wl-result"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Session Lookup -->
           <div class="tab-content" id="wt-session">
             <div class="card">
@@ -136,6 +176,53 @@
                   <button class="btn btn-primary" id="session-search-btn" data-t="search">חפש</button>
                 </div>
                 <div id="session-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item Lookup -->
+          <div class="tab-content" id="wt-item">
+            <div class="card">
+              <div class="card-header" data-t="itemLookup">חיפוש פריט</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="itemId">מזהה פריט</label>
+                      <input class="form-input" id="item-id-input" data-t-placeholder="itemIdPlaceholder">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="from">מתאריך</label>
+                      <input class="form-input" id="item-from" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="to">עד תאריך</label>
+                      <input class="form-input" id="item-to" type="datetime-local">
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-today" data-today="item-from,item-to" data-t="today">היום</button>
+                <button class="btn btn-primary" id="item-search-btn" data-t="search">חפש</button>
+                <div id="item-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Batch Weight -->
+          <div class="tab-content" id="wt-batch">
+            <div class="card">
+              <div class="card-header" data-t="batchWeight">טעינת משקלים</div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label" data-t="fileName">שם קובץ</label>
+                  <input class="form-input" id="batch-file-input" data-t-placeholder="fileNamePlaceholder">
+                </div>
+                <button class="btn btn-primary" id="batch-upload-btn" data-t="upload">העלה</button>
+                <div id="batch-result"></div>
               </div>
             </div>
           </div>
@@ -178,13 +265,60 @@
 
           <div class="tab-content" id="bl-rates">
             <div class="row">
-              <div class="col-6"><div class="card"><div class="card-header" data-t="uploadRates">העלה תעריפים</div><div class="card-body"><div class="empty" data-t="comingSoon">בקרוב</div></div></div></div>
-              <div class="col-6"><div class="card"><div class="card-header" data-t="downloadRates">הורד תעריפים</div><div class="card-body"><div class="empty" data-t="comingSoon">בקרוב</div></div></div></div>
+              <div class="col-6">
+                <div class="card">
+                  <div class="card-header" data-t="uploadRates">העלה תעריפים</div>
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label class="form-label" data-t="ratesFileName">שם קובץ אקסל</label>
+                      <input class="form-input" id="rates-file-input" data-t-placeholder="ratesFilePlaceholder">
+                    </div>
+                    <button class="btn btn-primary" id="rates-upload-btn" data-t="upload">העלה</button>
+                    <div id="rates-upload-result"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="card">
+                  <div class="card-header" data-t="downloadRates">הורד תעריפים</div>
+                  <div class="card-body">
+                    <button class="btn btn-primary" id="rates-download-btn" data-t="download">הורד</button>
+                    <div id="rates-download-result"></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="tab-content" id="bl-bills">
-            <div class="card"><div class="card-header" data-t="viewBill">הצג חשבון</div><div class="card-body"><div class="empty" data-t="comingSoon">בקרוב</div></div></div>
+            <div class="card">
+              <div class="card-header" data-t="providerBill">חשבון ספק</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="providerId">מזהה ספק</label>
+                      <input class="form-input" id="bill-provider-input" type="number" min="1">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="fromDate">מתאריך</label>
+                      <input class="form-input" id="bill-from" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="toDate">עד תאריך</label>
+                      <input class="form-input" id="bill-to" type="datetime-local">
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-today" data-today="bill-from,bill-to" data-t="today">היום</button>
+                <button class="btn btn-primary" id="bill-generate-btn" data-t="generate">הפק</button>
+                <div id="bill-result"></div>
+              </div>
+            </div>
           </div>
         </div>
 
