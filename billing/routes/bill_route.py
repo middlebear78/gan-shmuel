@@ -1,102 +1,78 @@
-# flask Blueprint lets us define routes in a separate file and register them on the app
 from flask import Blueprint, request, jsonify
-
-# datetime for parsing and formatting the timestamp strings
 from datetime import datetime
-
-# requests is used to call the external weight microservice over HTTP
-import requests
-
-# os.getenv reads the weight service URL from environment variables
-import os
-
-# import the SQLAlchemy db instance and the three models we need:
-# Provider — the company we're billing
-# Truck — each truck is linked to a provider
-# Rate — price per kg for each product, scoped to a provider
 from models import db, Provider, Truck, Rate
 
-# read the weight service base URL from env (e.g. "http://weight:5000")
+# requests is used to call the external weight microservice over HTTP
+# os.getenv reads the weight service URL from environment variables
+import requests
+import os
+
 WEIGHT_API = os.getenv("WEIGHT_SERVER_URL")
 
-# create a blueprint so this route file can be registered on the flask app
 bill_bp = Blueprint("bill", __name__)
 
-
-# takes a string like "20250315143000" and turns it into a python datetime
-# returns None if the string is garbage or doesn't match the expected format
+# ----------------------------------------------------------------------------------
+#                  _____ Helper functions _____
+# || parse_timestamp || resolve_time_range || get_provider_trucks ||
+# ----------------------------------------------------------------------------------
 def parse_timestamp(timeStamp_string):
     try:
-        # strptime parses the string using the exact "yyyymmddhhmmss" format
         return datetime.strptime(timeStamp_string, "%Y%m%d%H%M%S")
     except Exception:
-        # if anything goes wrong (wrong length, letters, etc.) just return None
         return None
 
-
-# determines the start and end datetimes for the billing window
-# if the caller didn't provide "from", we default to the 1st of this month at midnight
-# if the caller didn't provide "to", we default to right now
+# "from" default to the 1st of this month, "to" to right now
 def resolve_time_range(from_timeStamp, to_timeStamp):
-    # capture the current moment so both defaults are consistent
     now = datetime.now()
 
     if from_timeStamp:
-        # caller gave us a "from" string — try to parse it
         start = parse_timestamp(from_timeStamp)
     else:
-        # no "from" provided — default to the first day of the current month at 00:00:00
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     if to_timeStamp:
-        # caller gave us a "to" string — try to parse it
         end = parse_timestamp(to_timeStamp)
     else:
-        # no "to" provided — default to right now
         end = now
 
-    # return both as a tuple so the caller can unpack them
+    # return both so the caller can unpack them
     return start, end
 
-
-# queries the database for all trucks that belong to the given provider
-# returns a plain list of truck ID strings (e.g. ["T-001", "T-002"])
 def get_provider_trucks(provider_id):
-    # filter_by matches on the foreign key column, .all() returns a list of Truck objects
     trucks = Truck.query.filter_by(provider_id=provider_id).all()
     # extract just the id from each Truck object into a flat list
     return [truck.id for truck in trucks]
 
-
 # calls the weight microservice's GET /weight endpoint to get all completed
 # weighing transactions ("out" direction) within the given time window
-# raises an Exception if the weight service returns a non-200 status
 def fetch_weights(start, end):
-    # build the query params the weight service expects
+
     params = {
         # format datetimes back into the "yyyymmddhhmmss" string format
         "from": start.strftime("%Y%m%d%H%M%S"),
         "to": end.strftime("%Y%m%d%H%M%S"),
-        # we only care about completed weighings (truck weighed out)
         "filter": "out",
     }
 
     # make the HTTP GET call to the weight service
     response = requests.get(f"{WEIGHT_API}/weight", params=params)
 
-    # if the weight service is down or returns an error, blow up
-    # the caller (get_bill) will catch this and return a 500
     if response.status_code != 200:
         raise Exception("weight service error")
 
     # parse the JSON array of weight records and return it
+    #   "id": t.id,
+    #   "direction": t.direction,
+    #   "truck": t.truck,
+    #   "bruto": t.bruto,
+    #   "neto": t.neto / "na",
+    #   "produce": t.produce,
+    #   "containers": containers
     return response.json()
 
-
-# this is the core billing logic — it takes a provider and a time window,
-# fetches all weight records, filters to only this provider's trucks,
-# groups the neto weights by product, looks up the rate for each product,
-# and calculates the total pay
+# ----------------------------------------------------------------------------------
+#   the core billing logic
+# ----------------------------------------------------------------------------------
 def generate_bill(provider, start, end):
     # get all truck IDs for this provider as a set (for fast "in" lookups)
     provider_trucks = set(get_provider_trucks(provider.id))
@@ -105,35 +81,32 @@ def generate_bill(provider, start, end):
 
     # dict to accumulate total_kg and session_count per product (e.g. "oranges")
     product_stats = {}
-    # track unique trucks that appeared in at least one transaction
     trucks_seen = set()
-    # track unique session IDs that were counted
     sessions_seen = set()
 
     # loop through every weight record returned by the weight service
-    for w in weights:
+    for weight in weights:
         # if neto is "na", the container tara wasn't known yet so we can't bill
-        if w["neto"] == "na":
+        if weight["neto"] == "na":
             continue
 
         # the weight service includes "truck" in each record, so we read it
         # directly — this avoids an extra HTTP call to GET /session/<id>
-        truck_id = w.get("truck")
+        truck_id = weight.get("truck")                                              #TODO check if truck returns id, or somthing else
         # skip this record if the truck doesn't belong to our provider
         if truck_id not in provider_trucks:
             continue
 
-        # this truck contributed to the bill — remember it
         trucks_seen.add(truck_id)
         # track the session (weight record) ID for the count
-        sessions_seen.add(w["id"])
+        sessions_seen.add(weight["id"])
 
         # which product was on this truck (e.g. "oranges", "tomatoes")
-        produce = w["produce"]
+        produce = weight["produce"]
 
         try:
             # neto comes as an int or string — cast it to int for math
-            neto = int(w["neto"])
+            neto = int(weight["neto"])
         except (ValueError, TypeError):
             # if neto is somehow not a valid number, skip this record
             continue
