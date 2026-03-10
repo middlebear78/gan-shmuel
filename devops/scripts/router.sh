@@ -23,10 +23,11 @@ set -e
 #   2. Figure out which files changed (billing or weight)
 #   3. Call the right test script
 #
-# TWO SCENARIOS:
-#   PR opened/updated targeting staging → run tests
-#   Push to staging (PR merged)         → run deploy
-#     (deploy.sh doesn't exist yet — coming later)
+# TWO-TIER CI:
+#   PR targeting weight/billing  → run unit+integration
+#                                   for that service only
+#   PR targeting staging         → run E2E + frontend build
+#   Push to staging (PR merged)  → run deploy
 # ----------------------------------------------------
 
 EVENT="$1"
@@ -63,10 +64,11 @@ printf '%s' "$PAYLOAD" > "$TMP"
 # ----------------------------------------------------
 # PULL REQUEST EVENT
 # Fires when someone opens a new PR or pushes new
-# commits to an existing PR. We only care about PRs
-# that target the staging branch. We figure out which
-# files changed by doing a git diff between the PR
-# branch and staging, then call the right test script.
+# commits to an existing PR. Routes based on the
+# target (base) branch:
+#   weight/billing → test-single-service.sh (unit+integration)
+#   staging        → test-weight-and-billing-and-frontend.sh
+#                    (E2E + frontend build)
 # The test script runs in the background (&) so the
 # webhook tool can return 200 to GitHub immediately
 # instead of making GitHub wait for all tests to finish.
@@ -90,57 +92,38 @@ if [ "$EVENT" = "pull_request" ]; then
         exit 0
     fi
 
-    # Only care about PRs targeting staging.
-    # PRs to main, weight, billing, etc. are not our business.
-    if [ "$BASE_BRANCH" != "staging" ]; then
-        log "[INFO] PR targets $BASE_BRANCH, not staging. Ignoring."
-        rm -f "$TMP"
-        exit 0
-    fi
-
-    # ----------------------------------------------------
-    # DETECT WHICH FILES CHANGED
-    # We fetch both branches from the bare repo on EC2,
-    # then git diff to see which files are different
-    # between the PR branch and staging. This tells us
-    # if billing/, weight/, or both were modified.
-    # ----------------------------------------------------
-    cd /home/ubuntu/opt/gan-shmuel.git
-    git fetch origin "$PR_BRANCH" staging 2>/dev/null || true
-    CHANGED=$(git diff --name-only "origin/staging...origin/$PR_BRANCH" 2>/dev/null || echo "")
-
-    log "[INFO] Changed files in PR:"
-    while IFS= read -r file; do
-        [ -n "$file" ] && log "  - $file"
-    done <<< "$CHANGED"
-
-    # ----------------------------------------------------
-    # DECIDE WHETHER TO RUN TESTS
-    # Any change to billing/, weight/, or frontend/
-    # triggers the full test pipeline.
-    # ----------------------------------------------------
-    RUN_TESTS=false
-
-    while IFS= read -r file; do
-        case "$file" in
-            billing/* | weight/* | frontend/*)
-                RUN_TESTS=true
-                ;;
-        esac
-    done <<< "$CHANGED"
-
-    log "[INFO] Routing decision: run_tests=$RUN_TESTS"
-
     # Export COMMIT_SHA so the test scripts can post
     # GitHub commit status (green checkmark / red X)
     export COMMIT_SHA
 
-    if [ "$RUN_TESTS" = true ]; then
-        log "[INFO] Running billing + weight + frontend tests"
-        /home/ubuntu/opt/scripts/test-weight-and-billing-and-frontend.sh &
-    else
-        log "[INFO] No billing/weight/frontend changes in PR. Skipping."
-    fi
+    # ----------------------------------------------------
+    # TWO-TIER ROUTING
+    # Route based on which branch the PR targets:
+    #   weight/billing  → test-single-service.sh (fast,
+    #                     unit+integration for that service)
+    #   staging         → test-weight-and-billing-and-frontend.sh
+    #                     (E2E + frontend build only — unit+
+    #                     integration already passed on the
+    #                     service branch)
+    #   anything else   → ignore
+    # ----------------------------------------------------
+    case "$BASE_BRANCH" in
+        weight)
+            log "[INFO] PR targets weight — running weight unit+integration tests"
+            /home/ubuntu/opt/scripts/test-single-service.sh weight &
+            ;;
+        billing)
+            log "[INFO] PR targets billing — running billing unit+integration tests"
+            /home/ubuntu/opt/scripts/test-single-service.sh billing &
+            ;;
+        staging)
+            log "[INFO] PR targets staging — running E2E + frontend build"
+            /home/ubuntu/opt/scripts/test-weight-and-billing-and-frontend.sh &
+            ;;
+        *)
+            log "[INFO] PR targets $BASE_BRANCH — not a CI branch. Ignoring."
+            ;;
+    esac
 
     rm -f "$TMP"
     exit 0
