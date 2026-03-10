@@ -383,6 +383,36 @@ def get_session(session_id):
 
     return jsonify({"error": "session not found"}), 404
 
+
+@app.get("/unknown")
+def get_unknown():
+    transactions = Transaction.query.all()
+
+    all_cids = []
+    seen = set()
+
+    for transaction in transactions:
+        for cid in parse_containers(transaction.containers):
+            cid = cid.strip()
+            if cid and cid not in seen:
+                seen.add(cid)
+                all_cids.append(cid)
+
+    if not all_cids:
+        return jsonify([]), 200
+
+    known = ContainerRegistered.query.filter(
+        ContainerRegistered.container_id.in_(all_cids),
+        ContainerRegistered.weight.isnot(None)
+    ).all()
+
+    known_ids = {container.container_id for container in known}
+
+    unknown = [cid for cid in all_cids if cid not in known_ids]
+
+    return jsonify(unknown), 200
+
+
 @app.get('/item/<id>')
 def get_item(id):
     now = datetime.now()
