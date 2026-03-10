@@ -7,7 +7,7 @@ import os
 
 truck_bp = Blueprint("truck", __name__)
 
-WEIGHT_SERVER_URL=os.getenv("WEIGHT_SERVER_URL")
+WEIGHT_SERVER_URL=os.getenv("WEIGHT_SERVER_URL") or "http://weight-app:5000"
 
 @truck_bp.route("/truck", methods=["POST"])
 def new_truck():
@@ -54,7 +54,7 @@ def data_about_truck(truck_id):
 
     try:
         weight_api_url = f"{WEIGHT_SERVER_URL}/item/{truck_id}?from={t1}&to={t2}"
-        response = requests.get(weight_api_url)        
+        response = requests.get(weight_api_url,timeout=5)        
         if response.status_code == 200:
             weight_data = response.json()
             tara = weight_data.get("tara", "na")
