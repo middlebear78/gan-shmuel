@@ -14,6 +14,7 @@ set -e
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 STAGING_DIR="/home/ubuntu/opt/staging"
+SCRIPTS_DIR="/home/ubuntu/opt/scripts"
 COMPOSE_CMD="docker compose -f compose.yaml -f compose.ci.yaml"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
 LOGFILE="$LOGDIR/e2e-$(date +'%Y%m%d-%H%M%S').log"
@@ -71,11 +72,12 @@ cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
 # ----------------------------------------------------
 # PRE-CREATE SHARED /in DIRECTORY
 # The e2e test writes Excel files here, and the billing
-# container reads them via a bind mount.
+# container reads them via a bind mount (compose.ci.yaml
+# mounts ./tests/e2e/in from $STAGING_DIR).
 # We create it before docker compose so it's owned by
 # the current user, not root.
 # ----------------------------------------------------
-mkdir -p tests/e2e/in
+mkdir -p "$STAGING_DIR/tests/e2e/in"
 
 # ----------------------------------------------------
 # START ALL SERVICES
@@ -112,14 +114,16 @@ log "[INFO] Billing service is healthy"
 
 # ----------------------------------------------------
 # RUN E2E PYTEST
-# Passes the service URLs as env vars so the test
-# knows where to send HTTP requests.
+# Tests live in the scripts dir, not the staging dir.
+# E2E_IN_DIR tells the test where to write Excel files
+# (must match compose.ci.yaml bind mount in $STAGING_DIR).
 # PIPESTATUS[0] captures pytest's exit code (not tee's).
 # ----------------------------------------------------
 log "[INFO] Running e2e tests..."
 BILLING_URL_TEST="$BILLING_URL" \
 WEIGHT_URL_TEST="$WEIGHT_URL" \
-python3 -m pytest tests/e2e/ -v --tb=short 2>&1 | tee -a "$LOGFILE"
+E2E_IN_DIR="$STAGING_DIR/tests/e2e/in" \
+python3 -m pytest "$SCRIPTS_DIR/tests/e2e/" -v --tb=short 2>&1 | tee -a "$LOGFILE"
 E2E_EXIT=${PIPESTATUS[0]}
 [ "$E2E_EXIT" -eq 0 ] || fail "E2E tests failed (exit code $E2E_EXIT)"
 

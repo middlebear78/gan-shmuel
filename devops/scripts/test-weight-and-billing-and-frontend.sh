@@ -7,8 +7,8 @@ set -e
 # Runs on every PR targeting staging. Orchestrates:
 #   1. Weight unit + integration tests (via weight/docker-compose-dev.yaml)
 #   2. Billing unit + integration tests (via billing/docker-compose.yml)
-#   3. Frontend build check (docker build only, no tests)
-#   4. E2E cross-service tests (via run-e2e.sh)
+#   3. E2E cross-service tests (via run-e2e.sh)
+#   4. Frontend build check (docker build only, no tests)
 #
 # Each service's individual compose file is used for
 # unit/integration tests in isolation. After those pass,
@@ -196,16 +196,6 @@ log "[SUCCESS] Billing integration tests passed"
 log "[SUCCESS] Billing + Weight unit + integration passed"
 
 # ----------------------------------------------------
-# FRONTEND BUILD CHECK
-# Frontend has no tests — just verify the image builds.
-# Uses the staging directory which has the full repo.
-# ----------------------------------------------------
-STAGING_DIR="/home/ubuntu/opt/staging"
-log "[INFO] Building frontend image..."
-docker build -t ci-frontend "$STAGING_DIR/frontend" || fail "Frontend build failed"
-log "[SUCCESS] Frontend image built"
-
-# ----------------------------------------------------
 # TEAR DOWN INDIVIDUAL SERVICES BEFORE E2E
 # The e2e script spins up its own containers using
 # compose.yaml + compose.ci.yaml with different port mappings.
@@ -221,9 +211,21 @@ cd "$BILLING_WORKDIR" && docker compose -f "$BILLING_COMPOSE" down -v || true
 # ALL services together and runs cross-service tests.
 # If e2e fails, its own fail() handles Slack + cleanup.
 # We check the exit code here to stop the pipeline.
+# Run this BEFORE frontend build — no point building
+# frontend if e2e fails.
 # ----------------------------------------------------
 log "[INFO] Handing off to e2e tests..."
 /home/ubuntu/opt/scripts/run-e2e.sh || fail "E2E tests failed"
+
+# ----------------------------------------------------
+# FRONTEND BUILD CHECK
+# Frontend has no tests — just verify the image builds.
+# Uses the staging directory which has the full repo.
+# ----------------------------------------------------
+STAGING_DIR="/home/ubuntu/opt/staging"
+log "[INFO] Building frontend image..."
+docker build -t ci-frontend "$STAGING_DIR/frontend" || fail "Frontend build failed"
+log "[SUCCESS] Frontend image built"
 
 log "[SUCCESS] Billing + Weight + Frontend test passed — all unit + integration + e2e green"
 send_slack "✅ Billing + Weight + Frontend test passed — all unit + integration + e2e green"

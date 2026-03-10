@@ -13,8 +13,8 @@ set -euo pipefail
 # directory where this script lives
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# project root (two levels up from tests/local_tests/)
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# project root (one level up from local_tests/)
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # docker compose file for the E2E environment
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.e2e.yml"
@@ -46,7 +46,7 @@ cleanup() {
 trap cleanup EXIT
 
 # pre-create the shared /in directory so Docker doesn't create it as root
-mkdir -p "$PROJECT_ROOT/tests/e2e/in"
+mkdir -p "$SCRIPT_DIR/e2e/in"
 
 echo "==> Building and starting E2E services..."
 docker compose -f "$COMPOSE_FILE" up --build -d
@@ -88,7 +88,7 @@ echo "==> Running E2E tests..."
 # run pytest with the service URLs passed as env vars
 BILLING_URL_TEST="$BILLING_URL" \
 WEIGHT_URL_TEST="$WEIGHT_URL" \
-python3 -m pytest "$PROJECT_ROOT/tests/e2e/" -v --tb=short
+python3 -m pytest "$SCRIPT_DIR/e2e/" -v --tb=short
 
 echo ""
 echo "==> E2E tests passed!"

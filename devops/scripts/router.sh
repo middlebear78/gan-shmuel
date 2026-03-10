@@ -185,6 +185,11 @@ if [ "$EVENT" = "push" ]; then
         [ -n "$file" ] && log "  - $file"
     done <<< "$CHANGED_FILES"
 
+    # ----------------------------------------------------
+    # DECIDE WHETHER TO DEPLOY
+    # Any change to billing/, weight/, or frontend/
+    # triggers a full production deploy.
+    # ----------------------------------------------------
     RUN_DEPLOY=false
 
     while IFS= read -r file; do

@@ -1,7 +1,7 @@
 services:
   weight-db:
     build:
-      context: ../../weight
+      context: ../weight
       dockerfile: Dockerfile.mysql.dev
     environment:
       MYSQL_DATABASE: weight
@@ -17,7 +17,7 @@ services:
 
   weight-app:
     build:
-      context: ../../weight
+      context: ../weight
       dockerfile: Dockerfile.weight.dev
     environment:
       DB_HOSTNAME: weight-db
@@ -41,11 +41,11 @@ services:
       retries: 5
     volumes:
       - billing-db-data:/var/lib/mysql
-      - ../../billing/db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../billing/db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
 
   billing-app:
     build:
-      context: ../../billing
+      context: ../billing
       dockerfile: Dockerfile
     environment:
       DB_USER: root
@@ -62,7 +62,7 @@ services:
 
   frontend:
     build:
-      context: ../../frontend
+      context: ../frontend
       dockerfile: Dockerfile
     environment:
       WEIGHT_URL: http://weight-app:5000
