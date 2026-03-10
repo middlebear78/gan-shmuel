@@ -1,7 +1,23 @@
 #!/bin/bash
 set -e
 
-
+# ----------------------------------------------------
+# TEST PIPELINE — weight + billing + frontend
+#
+# Runs on every PR targeting staging. Orchestrates:
+#   1. Weight unit + integration tests (via weight/docker-compose-dev.yaml)
+#   2. Billing unit + integration tests (via billing/docker-compose.yml)
+#   3. Frontend build check (docker build only, no tests)
+#   4. E2E cross-service tests (via run-e2e.sh)
+#
+# Each service's individual compose file is used for
+# unit/integration tests in isolation. After those pass,
+# everything is torn down and run-e2e.sh spins up the
+# full stack with compose.yaml + compose.ci.yaml.
+#
+# Called by router.sh in the background (&) so the
+# webhook returns 200 to GitHub immediately.
+# ----------------------------------------------------
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
@@ -192,7 +208,7 @@ log "[SUCCESS] Frontend image built"
 # ----------------------------------------------------
 # TEAR DOWN INDIVIDUAL SERVICES BEFORE E2E
 # The e2e script spins up its own containers using
-# docker-compose.e2e.yml with different port mappings.
+# compose.yaml + compose.ci.yaml with different port mappings.
 # We tear down the individual service containers first
 # so there are no port conflicts.
 # ----------------------------------------------------
