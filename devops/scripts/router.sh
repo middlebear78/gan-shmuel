@@ -223,6 +223,7 @@ if [ "$EVENT" = "push" ]; then
         log "[INFO] Running deploy mode"
         /home/ubuntu/opt/scripts/deploy.sh "$RUN_BILLING" "$RUN_WEIGHT" &
     else
+    
         log "[INFO] No relevant changes. Skipping deploy."
     fi
 
