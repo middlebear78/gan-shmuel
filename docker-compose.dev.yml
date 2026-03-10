@@ -64,8 +64,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    environment:
+      WEIGHT_URL: http://weight-app:5000
+      BILLING_URL: http://billing-app:5000
     ports:
-      - "8082:80"
+      - "8082:5000"
     depends_on:
       - weight-app
       - billing-app

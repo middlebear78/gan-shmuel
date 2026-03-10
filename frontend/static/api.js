@@ -36,8 +36,8 @@ async function getTruck(id) {
 async function createProvider(name) {
   const res = await fetch('/api/billing/provider', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'name=' + encodeURIComponent(name),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'error');
@@ -47,8 +47,8 @@ async function createProvider(name) {
 async function updateProvider(id, name) {
   const res = await fetch('/api/billing/provider/' + id, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'name=' + encodeURIComponent(name),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'error');
@@ -56,11 +56,10 @@ async function updateProvider(id, name) {
 }
 
 async function registerTruck(id, provider) {
-  const params = new URLSearchParams({ id, provider });
   const res = await fetch('/api/billing/truck', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, provider }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'error');
@@ -70,8 +69,8 @@ async function registerTruck(id, provider) {
 async function updateTruck(id, provider) {
   const res = await fetch('/api/billing/truck/' + id, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'provider=' + encodeURIComponent(provider),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'error');
