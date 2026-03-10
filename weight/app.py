@@ -1,5 +1,6 @@
 from flask import Flask, Response, request, jsonify
 from datetime import datetime
+from sqlalchemy import text
 import os
 import csv
 import json
@@ -138,7 +139,11 @@ def calculate_neto(bruto, truck_tara, container_ids):
 
 @app.get("/health")
 def health():
-    return Response("OK", status=200, mimetype="text/plain")
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "OK"}), 200
+    except Exception as e:
+        return jsonify({"status": "Failure", "error": str(e)}), 500
 
 
 @app.post("/weight")
@@ -456,6 +461,36 @@ def get_item(id):
         "tara": tara_weight,
         "sessions": list(sessions)
     }), 200 
+
+
+@app.get("/unknown")
+def get_unknown():
+    transactions = Transaction.query.all()
+
+    all_cids = []
+    seen = set()
+
+    for transaction in transactions:
+        for cid in parse_containers(transaction.containers):
+            cid = cid.strip()
+            if cid and cid not in seen:
+                seen.add(cid)
+                all_cids.append(cid)
+
+    if not all_cids:
+        return jsonify([]), 200
+
+    known = ContainerRegistered.query.filter(
+        ContainerRegistered.container_id.in_(all_cids),
+        ContainerRegistered.weight.isnot(None)
+    ).all()
+
+    known_ids = {container.container_id for container in known}
+
+    unknown = [cid for cid in all_cids if cid not in known_ids]
+
+    return jsonify(unknown), 200
+
 
 
 if __name__ == "__main__":

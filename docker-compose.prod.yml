@@ -17,6 +17,7 @@
 # Ports exposed on the host:
 #   - 8080 → weight app
 #   - 8081 → billing app
+#   - 8083 → frontend
 #   (DB ports are NOT exposed — only accessible inside Docker)
 #
 # NOTE: Staging/E2E uses ports 80 and 8090 so there is
@@ -110,6 +111,24 @@ services:
         condition: service_healthy
       weight-app:
         condition: service_started
+    restart: always
+
+  # ---- frontend ----
+  # Flask app serving the frontend UI on port 5000 inside
+  # the container, mapped to port 8083 on the host.
+  # Proxies /api/weight/* and /api/billing/* to backends.
+  frontend:
+    build:
+      context: ./frontend
+    container_name: prod-frontend
+    environment:
+      WEIGHT_URL: http://weight-app:5000
+      BILLING_URL: http://billing-app:5000
+    ports:
+      - "8083:5000"
+    depends_on:
+      - weight-app
+      - billing-app
     restart: always
 
 # ----------------------------------------------------

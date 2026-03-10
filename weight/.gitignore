@@ -4,3 +4,5 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+.vscode/
+test_results.txt

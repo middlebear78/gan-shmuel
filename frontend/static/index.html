@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gan Shmuel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app rtl" id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="ganshmuel-logo.png" alt="Gan Shmuel">
+        <h2 id="sidebar-title">גן שמואל</h2>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item active" data-page="dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          <span class="nav-label" data-t="dashboard">לוח בקרה</span>
+        </li>
+        <li class="nav-item" data-page="weight">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h18"/></svg>
+          <span class="nav-label" data-t="weightNav">שקילה</span>
+        </li>
+        <li class="nav-item" data-page="billing">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="nav-label" data-t="billing">חיוב</span>
+        </li>
+        <li class="nav-item" data-page="management">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="nav-label" data-t="management">ניהול</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+      <header class="header">
+        <button class="toggle-btn" id="toggle-sidebar">&#9776;</button>
+        <button class="lang-btn" id="toggle-lang">&#127760; English</button>
+      </header>
+
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div class="page active" id="page-dashboard">
+          <h1 class="page-title" data-t="dashboard">לוח בקרה</h1>
+          <span class="page-subtitle" data-t="systemOverview">סקירת מערכת לפלטפורמת הניהול של גן שמואל</span>
+          <div class="status-row" id="health-cards"></div>
+        </div>
+
+        <!-- WEIGHT -->
+        <div class="page" id="page-weight">
+          <h1 class="page-title" data-t="weightNav">שקילה</h1>
+          <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="wt-record" data-t="recordWeight">רישום שקילה</button>
+            <button class="tab-btn" data-tab="wt-list" data-t="weightList">רשימת שקילות</button>
+            <button class="tab-btn" data-tab="wt-session" data-t="sessionLookup">חיפוש שקילה</button>
+            <button class="tab-btn" data-tab="wt-item" data-t="itemLookup">חיפוש פריט</button>
+            <button class="tab-btn" data-tab="wt-batch" data-t="batchWeight">טעינת משקלים</button>
+            <button class="tab-btn" data-tab="wt-unknown" data-t="unknownContainers">מכולות ללא משקל ידוע</button>
+          </div>
+
+          <!-- Record Weight -->
+          <div class="tab-content active" id="wt-record">
+            <div class="card">
+              <div class="card-header" data-t="recordWeight">רישום שקילה</div>
+              <div class="card-body">
+                <form id="weight-form">
+                  <div class="row">
+                    <div class="col-4">
+                      <div class="form-group">
+                        <label class="form-label" data-t="direction">כיוון</label>
+                        <select class="form-select" name="direction">
+                          <option value="in" data-t="directionIn">כניסה</option>
+                          <option value="out" data-t="directionOut">יציאה</option>
+                          <option value="none" data-t="directionNone">ללא</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="form-group">
+                        <label class="form-label" data-t="truck">משאית</label>
+                        <input class="form-input" name="truck" data-t-placeholder="truckPlaceholder">
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="form-group">
+                        <label class="form-label" data-t="containers">מכולות</label>
+                        <input class="form-input" name="containers" data-t-placeholder="containersPlaceholder">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-4">
+                      <div class="form-group">
+                        <label class="form-label" data-t="weight">משקל</label>
+                        <input class="form-input" name="weight" type="number" min="0" required>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="form-group">
+                        <label class="form-label" data-t="unit">יחידה</label>
+                        <select class="form-select" name="unit">
+                          <option value="kg">kg</option>
+                          <option value="lbs">lbs</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="form-group">
+                        <label class="form-label" data-t="produce">תוצרת</label>
+                        <input class="form-input" name="produce" data-t-placeholder="producePlaceholder">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" data-t="force">כפה</label>
+                    <div class="switch-wrap">
+                      <button type="button" class="switch" id="force-switch"></button>
+                      <input type="hidden" name="force" value="false">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary" data-t="submit">שלח</button>
+                  <button type="reset" class="btn" style="margin-inline-start:8px" data-t="reset">נקה</button>
+                </form>
+                <div id="weight-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weight List -->
+          <div class="tab-content" id="wt-list">
+            <div class="card">
+              <div class="card-header" data-t="weightList">רשימת שקילות</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="from">מתאריך</label>
+                      <input class="form-input" id="wl-from" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="to">עד תאריך</label>
+                      <input class="form-input" id="wl-to" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="filter">סינון</label>
+                      <select class="form-select" id="wl-filter">
+                        <option value="in,out,none">in, out, none</option>
+                        <option value="in">in</option>
+                        <option value="out">out</option>
+                        <option value="none">none</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-today" data-today="wl-from,wl-to" data-t="today">היום</button>
+                <button class="btn btn-primary" id="wl-load-btn" data-t="load">טען</button>
+                <div id="wl-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Session Lookup -->
+          <div class="tab-content" id="wt-session">
+            <div class="card">
+              <div class="card-header" data-t="sessionLookup">חיפוש שקילה</div>
+              <div class="card-body">
+                <div class="inline-search">
+                  <input class="form-input" id="session-id-input" data-t-placeholder="sessionId">
+                  <button class="btn btn-primary" id="session-search-btn" data-t="search">חפש</button>
+                </div>
+                <div id="session-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item Lookup -->
+          <div class="tab-content" id="wt-item">
+            <div class="card">
+              <div class="card-header" data-t="itemLookup">חיפוש פריט</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="itemId">מזהה פריט</label>
+                      <input class="form-input" id="item-id-input" data-t-placeholder="itemIdPlaceholder">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="from">מתאריך</label>
+                      <input class="form-input" id="item-from" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="to">עד תאריך</label>
+                      <input class="form-input" id="item-to" type="datetime-local">
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-today" data-today="item-from,item-to" data-t="today">היום</button>
+                <button class="btn btn-primary" id="item-search-btn" data-t="search">חפש</button>
+                <div id="item-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Batch Weight -->
+          <div class="tab-content" id="wt-batch">
+            <div class="card">
+              <div class="card-header" data-t="batchWeight">טעינת משקלים</div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label" data-t="fileName">שם קובץ</label>
+                  <input class="form-input" id="batch-file-input" data-t-placeholder="fileNamePlaceholder">
+                </div>
+                <button class="btn btn-primary" id="batch-upload-btn" data-t="upload">העלה</button>
+                <div id="batch-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unknown Containers -->
+          <div class="tab-content" id="wt-unknown">
+            <div class="card">
+              <div class="card-header">
+                <span data-t="unknownContainers">מכולות ללא משקל ידוע</span>
+                <button class="btn" id="refresh-unknown" data-t="refresh">רענן</button>
+              </div>
+              <div class="card-body">
+                <div id="unknown-list"><div class="empty" data-t="noUnknown">כל המכולות עם משקל ידוע</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BILLING -->
+        <div class="page" id="page-billing">
+          <h1 class="page-title" data-t="billing">חיוב</h1>
+          <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="bl-truck" data-t="truckBill">חשבון משאית</button>
+            <button class="tab-btn" data-tab="bl-rates" data-t="rates">תעריפים</button>
+            <button class="tab-btn" data-tab="bl-bills" data-t="bills">חשבונות</button>
+          </div>
+
+          <div class="tab-content active" id="bl-truck">
+            <div class="card">
+              <div class="card-header" data-t="truckBill">חשבון משאית</div>
+              <div class="card-body">
+                <div class="inline-search">
+                  <input class="form-input" id="bill-truck-input" data-t-placeholder="truckIdPlaceholder">
+                  <button class="btn btn-primary" id="bill-truck-btn" data-t="search">חפש</button>
+                </div>
+                <div id="bill-truck-result"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="bl-rates">
+            <div class="row">
+              <div class="col-6">
+                <div class="card">
+                  <div class="card-header" data-t="uploadRates">העלה תעריפים</div>
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label class="form-label" data-t="ratesFileName">שם קובץ אקסל</label>
+                      <input class="form-input" id="rates-file-input" data-t-placeholder="ratesFilePlaceholder">
+                    </div>
+                    <button class="btn btn-primary" id="rates-upload-btn" data-t="upload">העלה</button>
+                    <div id="rates-upload-result"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="card">
+                  <div class="card-header" data-t="downloadRates">הורד תעריפים</div>
+                  <div class="card-body">
+                    <button class="btn btn-primary" id="rates-download-btn" data-t="download">הורד</button>
+                    <div id="rates-download-result"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="bl-bills">
+            <div class="card">
+              <div class="card-header" data-t="providerBill">חשבון ספק</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="providerId">מזהה ספק</label>
+                      <input class="form-input" id="bill-provider-input" type="number" min="1">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="fromDate">מתאריך</label>
+                      <input class="form-input" id="bill-from" type="datetime-local">
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label class="form-label" data-t="toDate">עד תאריך</label>
+                      <input class="form-input" id="bill-to" type="datetime-local">
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-today" data-today="bill-from,bill-to" data-t="today">היום</button>
+                <button class="btn btn-primary" id="bill-generate-btn" data-t="generate">הפק</button>
+                <div id="bill-result"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MANAGEMENT -->
+        <div class="page" id="page-management">
+          <h1 class="page-title" data-t="management">ניהול</h1>
+          <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="mg-providers" data-t="providers">ספקים</button>
+            <button class="tab-btn" data-tab="mg-trucks" data-t="trucks">משאיות</button>
+          </div>
+
+          <!-- Providers -->
+          <div class="tab-content active" id="mg-providers">
+            <div class="row">
+              <div class="col-6">
+                <div class="card">
+                  <div class="card-header" data-t="createProvider">צור ספק</div>
+                  <div class="card-body">
+                    <form id="create-provider-form">
+                      <div class="form-group">
+                        <label class="form-label" data-t="providerName">שם ספק</label>
+                        <input class="form-input" name="name" required data-t-placeholder="providerNamePlaceholder">
+                      </div>
+                      <button type="submit" class="btn btn-primary" data-t="createProvider">צור ספק</button>
+                    </form>
+                    <div id="create-provider-result"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="card">
+                  <div class="card-header" data-t="updateProvider">עדכן ספק</div>
+                  <div class="card-body">
+                    <form id="update-provider-form">
+                      <div class="form-group">
+                        <label class="form-label" data-t="providerId">מזהה ספק</label>
+                        <input class="form-input" name="id" type="number" min="1" required>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" data-t="newName">שם חדש</label>
+                        <input class="form-input" name="name" required data-t-placeholder="providerNamePlaceholder">
+                      </div>
+                      <button type="submit" class="btn btn-primary" data-t="updateProvider">עדכן ספק</button>
+                    </form>
+                    <div id="update-provider-result"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trucks -->
+          <div class="tab-content" id="mg-trucks">
+            <div class="row">
+              <div class="col-4">
+                <div class="card">
+                  <div class="card-header" data-t="registerTruck">רשום משאית</div>
+                  <div class="card-body">
+                    <form id="register-truck-form">
+                      <div class="form-group">
+                        <label class="form-label" data-t="truckId">מזהה משאית</label>
+                        <input class="form-input" name="id" required data-t-placeholder="truckIdPlaceholder">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" data-t="provider">ספק</label>
+                        <input class="form-input" name="provider" required data-t-placeholder="providerIdPlaceholder">
+                      </div>
+                      <button type="submit" class="btn btn-primary" data-t="registerTruck">רשום משאית</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="card">
+                  <div class="card-header" data-t="updateTruck">עדכן משאית</div>
+                  <div class="card-body">
+                    <form id="update-truck-form">
+                      <div class="form-group">
+                        <label class="form-label" data-t="truckId">מזהה משאית</label>
+                        <input class="form-input" name="id" required data-t-placeholder="truckIdPlaceholder">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" data-t="provider">ספק</label>
+                        <input class="form-input" name="provider" required data-t-placeholder="providerIdPlaceholder">
+                      </div>
+                      <button type="submit" class="btn btn-primary" data-t="updateTruck">עדכן משאית</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="card">
+                  <div class="card-header" data-t="lookupTruck">חפש משאית</div>
+                  <div class="card-body">
+                    <div class="inline-search">
+                      <input class="form-input" id="lookup-truck-input" data-t-placeholder="truckIdPlaceholder">
+                      <button class="btn btn-primary" id="lookup-truck-btn" data-t="search">חפש</button>
+                    </div>
+                    <div id="lookup-truck-result"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="i18n.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
