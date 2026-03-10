@@ -23,7 +23,10 @@ mkdir -p "$LOGDIR"
 # We source them so the script uses whatever is configured
 # there — no hardcoded URLs anywhere.
 # ----------------------------------------------------
-[ -f "$STAGING_DIR/billing/.env-prod" ] && . "$STAGING_DIR/weight/.env-prod"
+
+[ -f "$STAGING_DIR/billing/.env-prod" ] && . "$STAGING_DIR/billing/.env-prod"
+[ -f "$STAGING_DIR/weight/.env-prod" ] && . "$STAGING_DIR/weight/.env-prod"
+
 BILLING_URL="${BILLING_URL_PROD:?BILLING_URL_PROD is not set in billing/.env}"
 WEIGHT_URL="${WEIGHT_URL_PROD:?WEIGHT_URL_PROD is not set in billing/.env}"
 
