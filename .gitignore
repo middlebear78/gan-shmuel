@@ -1,6 +1,12 @@
+# Environment
 .env
-# Python venv
+
+# Python
+venv/
 .venv/
 __pycache__/
 *.pyc
-.env
+.pytest_cache/
+
+# OS
+.DS_Store
