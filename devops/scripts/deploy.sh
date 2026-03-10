@@ -23,14 +23,14 @@ mkdir -p "$LOGDIR"
 # We source them so the script uses whatever is configured
 # there — no hardcoded URLs anywhere.
 # ----------------------------------------------------
-[ -f "$STAGING_DIR/billing/.env-prod" ] && . "$STAGING_DIR/billing/.env-prod"
-BILLING_URL="${BILLING_URL_TEST:?BILLING_URL_TEST is not set in billing/.env}"
-WEIGHT_URL="${WEIGHT_URL_TEST:?WEIGHT_URL_TEST is not set in billing/.env}"
+[ -f "$STAGING_DIR/billing/.env-prod" ] && . "$STAGING_DIR/weight/.env-prod"
+BILLING_URL="${BILLING_URL_PROD:?BILLING_URL_PROD is not set in billing/.env}"
+WEIGHT_URL="${WEIGHT_URL_PROD:?WEIGHT_URL_PROD is not set in billing/.env}"
 
 log() {
     local msg="$1"
     local ts
-    ts=$(date +'%Y-%m-%d_%H-%M-%S')
+    ts=$(date '+%d/%m/%Y_%H:%M:%S')
     echo "[$ts] $msg" | tee -a "$LOGFILE"
 }
 
@@ -41,29 +41,17 @@ send_slack() {
       "$SLACK_URL" > /dev/null
 }
 
-# ----------------------------------------------------
-# GUARANTEED CLEANUP (trap)
-# Tears down ALL e2e containers on exit, no matter what.
-# ----------------------------------------------------
-cleanup() {
-    log "[INFO] Trap triggered — tearing down e2e containers..."
-    cd "$STAGING_DIR" && docker compose -f "$PROD_COMPOSE" down -v --remove-orphans 2>/dev/null || true
-    log "[INFO] E2E cleanup complete"
-}
-trap cleanup EXIT
-
 fail() {
     local msg="$1"
     echo "ERROR: $msg"
     log "[ERROR] $msg"
-    send_slack "❌ E2E test failed: $msg"
+    send_slack "❌ Deployment failed: $msg"
     exit 1
 }
 
 log "[INFO] === Deployment started ==="
 
 cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
-
 
 # ----------------------------------------------------
 # START ALL SERVICES
@@ -96,5 +84,3 @@ for i in {1..45}; do
     sleep 2
 done
 log "[INFO] Billing service is healthy"
-
-
