@@ -1,0 +1,42 @@
+services:
+  weight-db:
+    container_name: ci-weight-db
+    environment:
+      MYSQL_DATABASE: weight
+      MYSQL_ROOT_PASSWORD: heavy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pheavy"]
+
+  weight-app:
+    container_name: ci-weight-app
+    environment:
+      DB_NAME: weight
+      DB_USER: root
+      DB_PASSWORD: heavy
+    ports:
+      - "80:5000"
+    restart: on-failure
+
+  billing-db:
+    container_name: ci-billing-db
+    environment:
+      MYSQL_ROOT_PASSWORD: billingrootpass
+
+  billing-app:
+    container_name: ci-billing-app
+    environment:
+      DB_USER: root
+      DB_PASSWORD: billingrootpass
+      DB_PORT: 3306
+      DB_NAME: billing_db
+    ports:
+      - "8090:5000"
+    volumes:
+      - ./tests/e2e/in:/app/in
+    restart: on-failure
+
+  frontend:
+    container_name: ci-frontend
+    ports:
+      - "8085:5000"
+    restart: on-failure

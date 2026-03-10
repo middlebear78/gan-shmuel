@@ -3,18 +3,18 @@ set -e
 
 # ----------------------------------------------------
 # E2E TEST RUNNER (staging only — NOT production)
-# Spins up ALL services together (weight + billing)
-# using docker-compose.e2e.yml, waits for them to be
+# Spins up ALL services together (weight + billing + frontend)
+# using compose.yaml + compose.ci.yaml, waits for them to be
 # healthy, then runs the cross-service e2e pytest suite.
 # This tests that weight and billing can talk to each
 # other over real HTTP, with real databases.
-# Called by test-billing-and-weight.sh after unit +
+# Called by test-weight-and-billing-and-frontend.sh after unit +
 # integration tests pass, or can be run standalone.
 # ----------------------------------------------------
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 STAGING_DIR="/home/ubuntu/opt/staging"
-E2E_COMPOSE="docker-compose.e2e.yml"
+COMPOSE_CMD="docker compose -f compose.yaml -f compose.ci.yaml"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
 LOGFILE="$LOGDIR/e2e-$(date +'%Y%m%d-%H%M%S').log"
 
@@ -51,7 +51,7 @@ send_slack() {
 # ----------------------------------------------------
 cleanup() {
     log "[INFO] Trap triggered — tearing down e2e containers..."
-    cd "$STAGING_DIR" && docker compose -f "$E2E_COMPOSE" down -v --remove-orphans 2>/dev/null || true
+    cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
     log "[INFO] E2E cleanup complete"
 }
 trap cleanup EXIT
@@ -79,13 +79,14 @@ mkdir -p tests/e2e/in
 
 # ----------------------------------------------------
 # START ALL SERVICES
-# docker-compose.e2e.yml spins up:
+# compose.yaml + compose.ci.yaml spins up:
 #   - weight-db + weight-app (port 80)
 #   - billing-db + billing-app (port 8090)
-# All on the same Docker network so billing can call
-# weight internally via hostname.
+#   - frontend (port 8085)
+# All on the same Docker network so services can call
+# each other internally via hostname.
 # ----------------------------------------------------
-docker compose -f "$E2E_COMPOSE" up --build -d || fail "e2e compose up failed"
+$COMPOSE_CMD up --build -d || fail "e2e compose up failed"
 
 # ----------------------------------------------------
 # WAIT FOR SERVICES TO BE HEALTHY

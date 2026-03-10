@@ -18,12 +18,12 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ./weight/db/weightdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../../weight/db/weightdb.sql:/docker-entrypoint-initdb.d/init.sql
 
   # ---- weight service app ----
   weight-app:
     build:
-      context: ./weight
+      context: ../../weight
       dockerfile: Dockerfile.weight.dev
     container_name: e2e-weight-app
     environment:
@@ -50,12 +50,12 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ./billing/db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../../billing/db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
 
   # ---- billing service app ----
   billing-app:
     build:
-      context: ./billing
+      context: ../../billing
     container_name: e2e-billing-app
     environment:
       DB_USER: root
@@ -68,7 +68,7 @@ services:
     ports:
       - "8090:5000"
     volumes:
-      - ./tests/e2e/in:/app/in
+      - ../../tests/e2e/in:/app/in
     depends_on:
       billing-db:
         condition: service_healthy

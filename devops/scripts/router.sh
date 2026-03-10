@@ -115,37 +115,31 @@ if [ "$EVENT" = "pull_request" ]; then
     done <<< "$CHANGED"
 
     # ----------------------------------------------------
-    # DECIDE WHICH TEST SCRIPT TO RUN
-    # billing changed → run billing + weight (billing depends on weight)
-    # weight changed  → run weight only
-    # neither changed → skip
+    # DECIDE WHETHER TO RUN TESTS
+    # Any change to billing/, weight/, or frontend/
+    # triggers the full test pipeline.
     # ----------------------------------------------------
-    RUN_BILLING=false
-    RUN_WEIGHT=false
+    RUN_TESTS=false
 
     while IFS= read -r file; do
         case "$file" in
-            billing/*)
-                RUN_BILLING=true
-                RUN_WEIGHT=true
-                ;;
-            weight/*)
-                RUN_WEIGHT=true
+            billing/* | weight/* | frontend/*)
+                RUN_TESTS=true
                 ;;
         esac
     done <<< "$CHANGED"
 
-    log "[INFO] Routing decision: billing=$RUN_BILLING weight=$RUN_WEIGHT"
+    log "[INFO] Routing decision: run_tests=$RUN_TESTS"
 
     # Export COMMIT_SHA so the test scripts can post
     # GitHub commit status (green checkmark / red X)
     export COMMIT_SHA
 
-    if [ "$RUN_BILLING" = true ]; then
-        log "[INFO] Running billing + weight tests (TEST MODE)"
-        /home/ubuntu/opt/scripts/test-billing-and-weight.sh &
+    if [ "$RUN_TESTS" = true ]; then
+        log "[INFO] Running billing + weight + frontend tests"
+        /home/ubuntu/opt/scripts/test-weight-and-billing-and-frontend.sh &
     else
-        log "[INFO] No billing/weight changes in PR. Skipping."
+        log "[INFO] No billing/weight/frontend changes in PR. Skipping."
     fi
 
     rm -f "$TMP"
@@ -191,22 +185,17 @@ if [ "$EVENT" = "push" ]; then
         [ -n "$file" ] && log "  - $file"
     done <<< "$CHANGED_FILES"
 
-    RUN_BILLING=false
-    RUN_WEIGHT=false
+    RUN_DEPLOY=false
 
     while IFS= read -r file; do
         case "$file" in
-            billing/*)
-                RUN_BILLING=true
-                RUN_WEIGHT=true
-                ;;
-            weight/*)
-                RUN_WEIGHT=true
+            billing/* | weight/* | frontend/*)
+                RUN_DEPLOY=true
                 ;;
         esac
     done <<< "$CHANGED_FILES"
 
-    log "[INFO] Routing decision: billing=$RUN_BILLING weight=$RUN_WEIGHT"
+    log "[INFO] Routing decision: run_deploy=$RUN_DEPLOY"
 
     export COMMIT_SHA
 
@@ -214,16 +203,13 @@ if [ "$EVENT" = "push" ]; then
     # TRIGGER DEPLOY
     # deploy.sh handles: build, deploy to production,
     # smoke test, rollback if needed, push staging->main.
-    # We pass which services changed so it only deploys
-    # what's needed. Runs in background so webhook
-    # returns 200 to GitHub immediately.
-    # (deploy.sh will be created in a later step)
+    # Runs in background so webhook returns 200 to GitHub
+    # immediately.
     # ----------------------------------------------------
-    if [ "$RUN_BILLING" = true ] || [ "$RUN_WEIGHT" = true ]; then
+    if [ "$RUN_DEPLOY" = true ]; then
         log "[INFO] Running deploy mode"
-        /home/ubuntu/opt/scripts/deploy.sh "$RUN_BILLING" "$RUN_WEIGHT" &
+        /home/ubuntu/opt/scripts/deploy.sh &
     else
-    
         log "[INFO] No relevant changes. Skipping deploy."
     fi
 

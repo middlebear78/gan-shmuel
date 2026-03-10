@@ -3,14 +3,14 @@ set -e
 
 # ----------------------------------------------------
 # Deployer for production
-# Spins up ALL services together (weight + billing)
-# using docker-compose.prod.yml, waits for them to be
+# Spins up ALL services together (weight + billing + frontend)
+# using compose.yaml + compose.prod.yaml, waits for them to be
 # healthy
 # ----------------------------------------------------
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 STAGING_DIR="/home/ubuntu/opt/staging"
-PROD_COMPOSE="docker-compose.prod.yml"
+COMPOSE_CMD="docker compose -f compose.yaml -f compose.prod.yaml"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
 LOGFILE="$LOGDIR/prod-$(date +'%Y%m%d-%H%M%S').log"
 
@@ -58,13 +58,14 @@ cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
 
 # ----------------------------------------------------
 # START ALL SERVICES
-# docker-compose.prod.yml spins up:
+# compose.yaml + compose.prod.yaml spins up:
 #   - weight-db + weight-app (port 8080)
 #   - billing-db + billing-app (port 8081)
-# All on the same Docker network so billing can call
-# weight internally via hostname.
+#   - frontend (port 8083)
+# All on the same Docker network so services can call
+# each other internally via hostname.
 # ----------------------------------------------------
-docker compose -f "$PROD_COMPOSE" up --build -d || fail "production deploy compose up failed"
+$COMPOSE_CMD up --build -d || fail "production deploy compose up failed"
 
 # ----------------------------------------------------
 # WAIT FOR SERVICES TO BE HEALTHY
@@ -87,3 +88,17 @@ for i in {1..45}; do
     sleep 2
 done
 log "[INFO] Billing service is healthy"
+
+# ----------------------------------------------------
+# FRONTEND HEALTH CHECK
+# Frontend has no /health endpoint — check root / which
+# serves index.html and returns 200.
+# ----------------------------------------------------
+FRONTEND_URL="${FRONTEND_URL_PROD:-http://localhost:8083}"
+log "[INFO] Waiting for frontend service ($FRONTEND_URL)..."
+for i in {1..45}; do
+    curl -sf "$FRONTEND_URL/" > /dev/null 2>&1 && break
+    [ "$i" -eq 45 ] && fail "deploy frontend not healthy in 90s"
+    sleep 2
+done
+log "[INFO] Frontend service is healthy"

@@ -1,5 +1,7 @@
 #!/bin/bash
-docker compose -f docker-compose.dev.yml up --build -d
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+docker compose -f "$SCRIPT_DIR/docker-compose.dev.yml" up --build -d
 
 echo ""
 echo "Frontend: http://localhost:8082"

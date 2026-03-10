@@ -5,7 +5,7 @@ set -e
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
-LOGFILE="$LOGDIR/billing-and-weight.log"
+LOGFILE="$LOGDIR/weight-and-billing-and-frontend.log"
 
 WEIGHT_WORKDIR="/home/ubuntu/opt/staging/weight"
 WEIGHT_COMPOSE="docker-compose-dev.yaml"
@@ -180,6 +180,16 @@ log "[SUCCESS] Billing integration tests passed"
 log "[SUCCESS] Billing + Weight unit + integration passed"
 
 # ----------------------------------------------------
+# FRONTEND BUILD CHECK
+# Frontend has no tests — just verify the image builds.
+# Uses the staging directory which has the full repo.
+# ----------------------------------------------------
+STAGING_DIR="/home/ubuntu/opt/staging"
+log "[INFO] Building frontend image..."
+docker build -t ci-frontend "$STAGING_DIR/frontend" || fail "Frontend build failed"
+log "[SUCCESS] Frontend image built"
+
+# ----------------------------------------------------
 # TEAR DOWN INDIVIDUAL SERVICES BEFORE E2E
 # The e2e script spins up its own containers using
 # docker-compose.e2e.yml with different port mappings.
@@ -199,5 +209,5 @@ cd "$BILLING_WORKDIR" && docker compose -f "$BILLING_COMPOSE" down -v || true
 log "[INFO] Handing off to e2e tests..."
 /home/ubuntu/opt/scripts/run-e2e.sh || fail "E2E tests failed"
 
-log "[SUCCESS] Billing + Weight test passed — all unit + integration + e2e green"
-send_slack "✅ Billing + Weight test passed — all unit + integration + e2e green"
+log "[SUCCESS] Billing + Weight + Frontend test passed — all unit + integration + e2e green"
+send_slack "✅ Billing + Weight + Frontend test passed — all unit + integration + e2e green"

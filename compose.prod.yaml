@@ -1,0 +1,49 @@
+services:
+  weight-db:
+    container_name: prod-weight-db
+    env_file:
+      - ./weight/.env
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}"]
+    volumes:
+      - weight-db-data:/var/lib/mysql
+    restart: always
+
+  weight-app:
+    container_name: prod-weight-app
+    env_file:
+      - ./weight/.env
+    ports:
+      - "8080:5000"
+    restart: always
+
+  billing-db:
+    container_name: prod-billing-db
+    env_file:
+      - ./billing/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - billing-db-data:/var/lib/mysql
+    restart: always
+
+  billing-app:
+    container_name: prod-billing-app
+    env_file:
+      - ./billing/.env
+    ports:
+      - "8081:5000"
+    restart: always
+
+  frontend:
+    container_name: prod-frontend
+    ports:
+      - "8083:5000"
+    restart: always
+
+volumes:
+  weight-db-data:
+  billing-db-data:
