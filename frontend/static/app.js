@@ -2,6 +2,29 @@
 
 let isLoggedIn = false;
 
+// ── Convert datetime-local value to API format (yyyymmddhhmmss) ──
+function datetimeLocalToApi(value) {
+  if (!value) return '';
+  return value.replace(/[-T:]/g, '') + '00';
+}
+
+// ── Wire up "Today" buttons ──
+function setupTodayButtons() {
+  document.querySelectorAll('.btn-today').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [fromId, toId] = btn.dataset.today.split(',');
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const h = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById(fromId).value = `${y}-${m}-${d}T00:00`;
+      document.getElementById(toId).value = `${y}-${m}-${d}T${h}:${min}`;
+    });
+  });
+}
+
 // ── Toast (slide-in/out) ──
 function showToast(msg, type) {
   const toast = document.getElementById('toast');
@@ -184,8 +207,8 @@ function setupWeightList() {
   const result = document.getElementById('wl-result');
 
   btn.addEventListener('click', async () => {
-    const from = document.getElementById('wl-from').value.trim();
-    const to = document.getElementById('wl-to').value.trim();
+    const from = datetimeLocalToApi(document.getElementById('wl-from').value);
+    const to = datetimeLocalToApi(document.getElementById('wl-to').value);
     const filter = document.getElementById('wl-filter').value;
     result.innerHTML = '';
     btnLoading(btn, true);
@@ -253,8 +276,8 @@ function setupItemLookup() {
   btn.addEventListener('click', async () => {
     const id = document.getElementById('item-id-input').value.trim();
     if (!id) return;
-    const from = document.getElementById('item-from').value.trim();
-    const to = document.getElementById('item-to').value.trim();
+    const from = datetimeLocalToApi(document.getElementById('item-from').value);
+    const to = datetimeLocalToApi(document.getElementById('item-to').value);
     result.innerHTML = '';
     btnLoading(btn, true);
     try {
@@ -400,8 +423,8 @@ function setupBill() {
   btn.addEventListener('click', async () => {
     const providerId = document.getElementById('bill-provider-input').value.trim();
     if (!providerId) return;
-    const from = document.getElementById('bill-from').value.trim();
-    const to = document.getElementById('bill-to').value.trim();
+    const from = datetimeLocalToApi(document.getElementById('bill-from').value);
+    const to = datetimeLocalToApi(document.getElementById('bill-to').value);
     result.innerHTML = '';
     btnLoading(btn, true);
     try {
@@ -577,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup everything
   setupTabs();
+  setupTodayButtons();
   setupWeightForm();
   setupWeightList();
   setupSessionLookup();

@@ -138,13 +138,13 @@
                   <div class="col-4">
                     <div class="form-group">
                       <label class="form-label" data-t="from">מתאריך</label>
-                      <input class="form-input" id="wl-from" data-t-placeholder="datePlaceholder">
+                      <input class="form-input" id="wl-from" type="datetime-local">
                     </div>
                   </div>
                   <div class="col-4">
                     <div class="form-group">
                       <label class="form-label" data-t="to">עד תאריך</label>
-                      <input class="form-input" id="wl-to" data-t-placeholder="datePlaceholder">
+                      <input class="form-input" id="wl-to" type="datetime-local">
                     </div>
                   </div>
                   <div class="col-4">
@@ -159,6 +159,7 @@
                     </div>
                   </div>
                 </div>
+                <button class="btn btn-today" data-today="wl-from,wl-to" data-t="today">היום</button>
                 <button class="btn btn-primary" id="wl-load-btn" data-t="load">טען</button>
                 <div id="wl-result"></div>
               </div>
@@ -194,16 +195,17 @@
                   <div class="col-4">
                     <div class="form-group">
                       <label class="form-label" data-t="from">מתאריך</label>
-                      <input class="form-input" id="item-from" data-t-placeholder="datePlaceholder">
+                      <input class="form-input" id="item-from" type="datetime-local">
                     </div>
                   </div>
                   <div class="col-4">
                     <div class="form-group">
                       <label class="form-label" data-t="to">עד תאריך</label>
-                      <input class="form-input" id="item-to" data-t-placeholder="datePlaceholder">
+                      <input class="form-input" id="item-to" type="datetime-local">
                     </div>
                   </div>
                 </div>
+                <button class="btn btn-today" data-today="item-from,item-to" data-t="today">היום</button>
                 <button class="btn btn-primary" id="item-search-btn" data-t="search">חפש</button>
                 <div id="item-result"></div>
               </div>
@@ -302,16 +304,17 @@
                   <div class="col-4">
                     <div class="form-group">
                       <label class="form-label" data-t="fromDate">מתאריך</label>
-                      <input class="form-input" id="bill-from" data-t-placeholder="datePlaceholder">
+                      <input class="form-input" id="bill-from" type="datetime-local">
                     </div>
                   </div>
                   <div class="col-4">
                     <div class="form-group">
                       <label class="form-label" data-t="toDate">עד תאריך</label>
-                      <input class="form-input" id="bill-to" data-t-placeholder="datePlaceholder">
+                      <input class="form-input" id="bill-to" type="datetime-local">
                     </div>
                   </div>
                 </div>
+                <button class="btn btn-today" data-today="bill-from,bill-to" data-t="today">היום</button>
                 <button class="btn btn-primary" id="bill-generate-btn" data-t="generate">הפק</button>
                 <div id="bill-result"></div>
               </div>
