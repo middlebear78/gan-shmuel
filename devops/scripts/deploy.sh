@@ -46,16 +46,64 @@ send_slack() {
 }
 
 # ----------------------------------------------------
+# ROLLBACK SUPPORT
+# Before building new images, we tag the current running
+# images as :prev. If the deploy fails (health checks
+# don't pass), we don't just tear everything down and
+# leave production dead — we roll back to the previous
+# working images instead.
+#
+# The app images are built by compose and named after
+# the project directory (staging) + service name:
+#   staging-weight-app, staging-billing-app, staging-frontend
+# DB images are pulled (mysql, mariadb), not built, so
+# they don't change between deploys.
+#
+# On first-ever deploy there are no previous images —
+# in that case a failed deploy just tears down.
+# ----------------------------------------------------
+ROLLBACK_AVAILABLE=false
+if docker image inspect staging-weight-app:latest > /dev/null 2>&1; then
+    log "[INFO] Tagging current images as :prev for rollback..."
+    docker tag staging-weight-app:latest staging-weight-app:prev
+    docker tag staging-billing-app:latest staging-billing-app:prev
+    docker tag staging-frontend:latest staging-frontend:prev
+    ROLLBACK_AVAILABLE=true
+    log "[INFO] Rollback images saved"
+fi
+
+# ----------------------------------------------------
 # GUARANTEED CLEANUP (trap)
-# If the deploy fails at ANY point, this tears down all
-# production containers so nothing is left in a broken
-# state. Only runs on failure — on success we disable
-# the trap so containers keep running (it's production).
+# If the deploy fails at ANY point, this function runs
+# automatically on exit. Two scenarios:
+#   - Previous images exist → roll back to them so
+#     production stays up with the last working version
+#   - No previous images (first deploy) → tear down,
+#     nothing to roll back to
+# Only runs on failure — on success the containers
+# keep running (it's production).
 # ----------------------------------------------------
 DEPLOY_SUCCESS=false
 cleanup() {
-    if [ "$DEPLOY_SUCCESS" = false ]; then
-        log "[INFO] Trap triggered — tearing down failed deploy..."
+    if [ "$DEPLOY_SUCCESS" = true ]; then
+        return 0
+    fi
+
+    if [ "$ROLLBACK_AVAILABLE" = true ]; then
+        log "[INFO] Deploy failed — rolling back to previous images..."
+        cd "$STAGING_DIR"
+        # stop the broken containers (no -v, keep DB volumes)
+        $COMPOSE_CMD down --remove-orphans 2>/dev/null || true
+        # restore the previous working images
+        docker tag staging-weight-app:prev staging-weight-app:latest
+        docker tag staging-billing-app:prev staging-billing-app:latest
+        docker tag staging-frontend:prev staging-frontend:latest
+        # bring up with the old images (--no-build skips rebuild)
+        $COMPOSE_CMD up -d --no-build 2>/dev/null || true
+        log "[INFO] Rollback complete — previous version restored"
+        send_slack "⚠️ Deploy failed — rolled back to previous working version"
+    else
+        log "[INFO] No previous images — tearing down failed deploy..."
         cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
         log "[INFO] Cleanup complete"
     fi
@@ -77,13 +125,15 @@ log "[INFO] === Deployment started ==="
 cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
 
 # ----------------------------------------------------
-# START ALL SERVICES
+# BUILD AND START ALL SERVICES
 # compose.yaml + compose.prod.yaml spins up:
 #   - weight-db + weight-app (port 8080)
 #   - billing-db + billing-app (port 8081)
 #   - frontend (port 8083)
 # All on the same Docker network so services can call
 # each other internally via hostname.
+# If this fails, the cleanup trap rolls back to the
+# previous images automatically.
 # ----------------------------------------------------
 $COMPOSE_CMD up --build -d || fail "production deploy compose up failed"
 
