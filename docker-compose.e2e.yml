@@ -1,0 +1,77 @@
+# E2E docker-compose — spins up both billing and weight services
+# with their own MySQL databases, wired together on a shared network
+# so billing can call the weight service by hostname
+
+services:
+
+  # ---- weight service database ----
+  weight-db:
+    image: mysql:9.0.1-oraclelinux9
+    container_name: e2e-weight-db
+    environment:
+      MYSQL_DATABASE: weight
+      MYSQL_ROOT_PASSWORD: heavy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pheavy"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./weight/db/weightdb.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # ---- weight service app ----
+  weight-app:
+    build:
+      context: ./weight
+      dockerfile: Dockerfile.weight.dev
+    container_name: e2e-weight-app
+    environment:
+      DB_HOSTNAME: weight-db
+      DB_NAME: weight
+      DB_USER: root
+      DB_PASSWORD: heavy
+    ports:
+      - "80:5000"
+    depends_on:
+      weight-db:
+        condition: service_healthy
+    restart: on-failure
+
+  # ---- billing service database ----
+  billing-db:
+    image: mariadb:10.11
+    container_name: e2e-billing-db
+    environment:
+      MYSQL_ROOT_PASSWORD: billingrootpass
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./billing/db/billdb.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # ---- billing service app ----
+  billing-app:
+    build:
+      context: ./billing
+    container_name: e2e-billing-app
+    environment:
+      DB_USER: root
+      DB_PASSWORD: billingrootpass
+      DB_HOST: billing-db
+      DB_PORT: 3306
+      DB_NAME: billing_db
+      # billing calls weight via this URL (internal docker network hostname)
+      WEIGHT_SERVER_URL: http://weight-app:5000
+    ports:
+      - "8090:5000"
+    volumes:
+      - ./tests/e2e/in:/app/in
+    depends_on:
+      billing-db:
+        condition: service_healthy
+      weight-app:
+        condition: service_started
+    restart: on-failure
