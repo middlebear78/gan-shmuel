@@ -308,6 +308,14 @@ def get_weight():
 
     return jsonify(result), 200
 
+# ---- added non-required endpoint ---- #
+# Lists available files in /in for the frontend dropdown
+@app.get("/files")
+def list_files():
+    files = [f for f in os.listdir("in") if f.endswith((".csv", ".json"))]
+    return jsonify(files), 200
+# ---- end non-required endpoint ---- #
+
 @app.post("/batch-weight")
 def post_batch_weight():
     data = request.get_json(silent=True) or request.form.to_dict()

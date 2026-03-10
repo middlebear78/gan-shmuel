@@ -84,6 +84,14 @@ def _read_rates_excel(filename: str):
     return rows, safe_name
 
 
+# ---- added non-required endpoint ---- #
+# Lists available files in /in for the frontend dropdown
+@rates_bp.route("/files", methods=["GET"])
+def list_files():
+    files = [f for f in os.listdir(IN_DIR) if f.endswith((".xlsx", ".xls"))]
+    return jsonify(files), 200
+# ---- end non-required endpoint ---- #
+
 @rates_bp.route("/rates", methods=["POST"])
 def post_rates():
     """

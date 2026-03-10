@@ -219,7 +219,9 @@
               <div class="card-body">
                 <div class="form-group">
                   <label class="form-label" data-t="fileName">שם קובץ</label>
-                  <input class="form-input" id="batch-file-input" data-t-placeholder="fileNamePlaceholder">
+                  <select class="form-select" id="batch-file-input">
+                    <option value="" data-t="selectFile">בחר קובץ...</option>
+                  </select>
                 </div>
                 <button class="btn btn-primary" id="batch-upload-btn" data-t="upload">העלה</button>
                 <div id="batch-result"></div>
@@ -271,7 +273,9 @@
                   <div class="card-body">
                     <div class="form-group">
                       <label class="form-label" data-t="ratesFileName">שם קובץ אקסל</label>
-                      <input class="form-input" id="rates-file-input" data-t-placeholder="ratesFilePlaceholder">
+                      <select class="form-select" id="rates-file-input">
+                        <option value="" data-t="selectFile">בחר קובץ...</option>
+                      </select>
                     </div>
                     <button class="btn btn-primary" id="rates-upload-btn" data-t="upload">העלה</button>
                     <div id="rates-upload-result"></div>
@@ -425,29 +429,6 @@
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
-
-  <!-- Login Modal -->
-  <div class="modal-overlay" id="login-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <span data-t="loginRequired">נדרשת התחברות</span>
-        <button class="modal-close" id="login-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="login-form">
-          <div class="form-group">
-            <label class="form-label" data-t="username">שם משתמש</label>
-            <input class="form-input" name="username" required data-t-placeholder="username">
-          </div>
-          <div class="form-group">
-            <label class="form-label" data-t="password">סיסמה</label>
-            <input class="form-input" name="password" type="password" required data-t-placeholder="password">
-          </div>
-          <button type="submit" class="btn btn-primary btn-block" data-t="login">התחבר</button>
-        </form>
       </div>
     </div>
   </div>

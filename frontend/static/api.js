@@ -76,6 +76,16 @@ async function getUnknownContainers() {
   return await res.json();
 }
 
+async function getWeightFiles() {
+  const res = await fetch('/api/weight/files');
+  return await res.json();
+}
+
+async function getBillingFiles() {
+  const res = await fetch('/api/billing/files');
+  return await res.json();
+}
+
 // ── Billing ──
 
 async function getTruck(id) {
@@ -126,12 +136,6 @@ async function updateTruck(id, provider) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'error');
   return data;
-}
-
-async function lookupTruck(id) {
-  const res = await fetch('/api/billing/truck/' + id);
-  if (res.status === 404) return null;
-  return await res.json();
 }
 
 async function uploadRates(filename) {

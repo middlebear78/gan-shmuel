@@ -1,7 +1,5 @@
 // ── UI Logic (uses i18n.js and api.js) ──
 
-let isLoggedIn = false;
-
 // ── Convert datetime-local value to API format (yyyymmddhhmmss) ──
 function datetimeLocalToApi(value) {
   if (!value) return '';
@@ -66,10 +64,6 @@ function btnLoading(btn, loading) {
 
 // ── Navigation ──
 function navigateTo(page) {
-  if (page === 'management' && !isLoggedIn) {
-    document.getElementById('login-modal').classList.add('show');
-    return;
-  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -299,13 +293,32 @@ function setupItemLookup() {
   });
 }
 
+// ── Helper: populate a <select> with file names ──
+async function loadFileOptions(selectId, fetchFn) {
+  const select = document.getElementById(selectId);
+  try {
+    const files = await fetchFn();
+    // remove old options except the first placeholder
+    while (select.options.length > 1) select.remove(1);
+    files.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      select.appendChild(opt);
+    });
+  } catch { /* silently fail — dropdown stays with placeholder */ }
+}
+
 // ── Weight: Batch Weight ──
 function setupBatchWeight() {
   const btn = document.getElementById('batch-upload-btn');
   const result = document.getElementById('batch-result');
 
+  // load file list on init
+  loadFileOptions('batch-file-input', getWeightFiles);
+
   btn.addEventListener('click', async () => {
-    const filename = document.getElementById('batch-file-input').value.trim();
+    const filename = document.getElementById('batch-file-input').value;
     if (!filename) return;
     result.innerHTML = '';
     btnLoading(btn, true);
@@ -378,8 +391,11 @@ function setupRates() {
   const uploadBtn = document.getElementById('rates-upload-btn');
   const uploadResult = document.getElementById('rates-upload-result');
 
+  // load file list on init
+  loadFileOptions('rates-file-input', getBillingFiles);
+
   uploadBtn.addEventListener('click', async () => {
-    const filename = document.getElementById('rates-file-input').value.trim();
+    const filename = document.getElementById('rates-file-input').value;
     if (!filename) return;
     uploadResult.innerHTML = '';
     btnLoading(uploadBtn, true);
@@ -532,7 +548,7 @@ function setupTrucks() {
     lookupResult.innerHTML = '';
     btnLoading(lookupBtn, true);
     try {
-      const data = await lookupTruck(id);
+      const data = await getTruck(id);
       if (!data) {
         lookupResult.innerHTML = `<div class="empty">${t('notFound')}</div>`;
       } else {
@@ -551,31 +567,6 @@ function setupTrucks() {
 
   lookupBtn.addEventListener('click', lookup);
   lookupInput.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
-}
-
-// ── Login ──
-function setupLogin() {
-  const modal = document.getElementById('login-modal');
-  const form = document.getElementById('login-form');
-  const closeBtn = document.getElementById('login-close');
-
-  closeBtn.addEventListener('click', () => { modal.classList.remove('show'); form.reset(); });
-  modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('show'); form.reset(); } });
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = form.querySelector('[name="username"]').value;
-    const password = form.querySelector('[name="password"]').value;
-    if (username === 'admin' && password === 'admin') {
-      isLoggedIn = true;
-      modal.classList.remove('show');
-      form.reset();
-      showToast(t('loginSuccess'), 'success');
-      navigateTo('management');
-    } else {
-      showToast(t('loginFailed'), 'error');
-    }
-  });
 }
 
 // ── Init ──
@@ -612,7 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBill();
   setupProviders();
   setupTrucks();
-  setupLogin();
 
   // Ripple effect on all buttons
   document.querySelectorAll('.btn').forEach(btn => {
