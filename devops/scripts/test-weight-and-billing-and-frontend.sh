@@ -28,6 +28,7 @@ WEIGHT_COMPOSE="docker-compose-dev.yaml"
 
 BILLING_WORKDIR="/home/ubuntu/opt/staging/billing"
 BILLING_COMPOSE="docker-compose.yml"
+SCRIPTS_DIR="/home/ubuntu/opt/scripts"
 
 mkdir -p "$LOGDIR"
 touch "$LOGFILE"
@@ -46,11 +47,47 @@ send_slack() {
       "$SLACK_URL" > /dev/null
 }
 
+# ----------------------------------------------------
+# GITHUB COMMIT STATUS
+# Posts a status (success/failure) to the GitHub API
+# for the commit that triggered this CI run. This is
+# what makes the green checkmark or red X appear on the
+# PR page. Without this, GitHub has no way to know if
+# CI passed — which means branch protection rules
+# (require status checks to pass before merging) won't
+# work. The COMMIT_SHA is exported by router.sh before
+# calling this script. GITHUB_TOKEN must be set on EC2
+# with repo:status permission.
+# ----------------------------------------------------
+GITHUB_REPO="middlebear78/gan-shmuel"
+
+set_commit_status() {
+    local state="$1"       # "success", "failure", or "pending"
+    local description="$2" # short text shown on the PR
+
+    # skip if COMMIT_SHA or GITHUB_TOKEN are missing
+    if [ -z "${COMMIT_SHA:-}" ] || [ -z "${GITHUB_TOKEN:-}" ]; then
+        log "[WARN] COMMIT_SHA or GITHUB_TOKEN not set — skipping commit status"
+        return 0
+    fi
+
+    curl -s -X POST \
+      -H "Authorization: token $GITHUB_TOKEN" \
+      -H "Accept: application/vnd.github.v3+json" \
+      "https://api.github.com/repos/$GITHUB_REPO/statuses/$COMMIT_SHA" \
+      -d "{\"state\":\"$state\",\"description\":\"$description\",\"context\":\"ci/gan-shmuel\"}" \
+      > /dev/null 2>&1 || true
+}
+
 fail() {
     local msg="$1"
     echo "ERROR: $msg"
     log "[ERROR] $msg"
     send_slack "❌ Billing+Weight test failed: $msg"
+    # send email notification on CI failure
+    python3 "$SCRIPTS_DIR/send_email.py" --event ci --status fail --details "$msg" || true
+    # set red X on the PR so GitHub blocks the merge
+    set_commit_status "failure" "$msg"
     exit 1
 }
 
@@ -96,6 +133,8 @@ cleanup() {
 trap cleanup EXIT
 
 log "[INFO] Billing + Weight test started"
+# set yellow dot on the PR so reviewers know CI is running
+set_commit_status "pending" "CI pipeline running..."
 
 cd "$WEIGHT_WORKDIR" || fail "Moving to weight WORKDIR failed"
 git fetch origin || fail "weight git fetch failed"
@@ -229,3 +268,7 @@ log "[SUCCESS] Frontend image built"
 
 log "[SUCCESS] Billing + Weight + Frontend test passed — all unit + integration + e2e green"
 send_slack "✅ Billing + Weight + Frontend test passed — all unit + integration + e2e green"
+# send email notification on CI success
+python3 "$SCRIPTS_DIR/send_email.py" --event ci --status pass || true
+# set green checkmark on the PR so GitHub allows the merge
+set_commit_status "success" "All tests passed"

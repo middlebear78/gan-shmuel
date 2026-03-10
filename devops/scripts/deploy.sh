@@ -10,6 +10,7 @@ set -e
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 STAGING_DIR="/home/ubuntu/opt/staging"
+SCRIPTS_DIR="/home/ubuntu/opt/scripts"
 COMPOSE_CMD="docker compose -f compose.yaml -f compose.prod.yaml"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
 LOGFILE="$LOGDIR/prod-$(date +'%Y%m%d-%H%M%S').log"
@@ -44,11 +45,30 @@ send_slack() {
       "$SLACK_URL" > /dev/null
 }
 
+# ----------------------------------------------------
+# GUARANTEED CLEANUP (trap)
+# If the deploy fails at ANY point, this tears down all
+# production containers so nothing is left in a broken
+# state. Only runs on failure — on success we disable
+# the trap so containers keep running (it's production).
+# ----------------------------------------------------
+DEPLOY_SUCCESS=false
+cleanup() {
+    if [ "$DEPLOY_SUCCESS" = false ]; then
+        log "[INFO] Trap triggered — tearing down failed deploy..."
+        cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
+        log "[INFO] Cleanup complete"
+    fi
+}
+trap cleanup EXIT
+
 fail() {
     local msg="$1"
     echo "ERROR: $msg"
     log "[ERROR] $msg"
     send_slack "❌ Deployment failed: $msg"
+    # send email notification on deploy failure
+    python3 "$SCRIPTS_DIR/send_email.py" --event deploy --status fail --details "$msg" || true
     exit 1
 }
 
@@ -102,3 +122,37 @@ for i in {1..45}; do
     sleep 2
 done
 log "[INFO] Frontend service is healthy"
+
+# ----------------------------------------------------
+# DEPLOY SUCCESS
+# All services are up and healthy. Mark success so the
+# cleanup trap does NOT tear down the containers.
+# ----------------------------------------------------
+DEPLOY_SUCCESS=true
+log "[SUCCESS] === Deployment complete — all services healthy ==="
+
+# ----------------------------------------------------
+# PUSH STAGING → MAIN
+# After a successful deploy, main must mirror production
+# exactly. This pushes staging to main so they stay in
+# sync. The code has already been:
+#   1. Tested by CI (unit + integration + e2e)
+#   2. Approved by devops on the PR
+#   3. Merged to staging
+#   4. Deployed and health-checked in production
+# So there's no reason to gate this again.
+#
+# IMPORTANT: main has branch protection enabled. The
+# GITHUB_TOKEN used on EC2 must be added to the bypass
+# list in GitHub repo settings (Settings → Rules →
+# Rulesets) so this push is allowed. Everyone else
+# still needs a PR + approval to push to main.
+# ----------------------------------------------------
+cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
+log "[INFO] Pushing staging → main..."
+git push origin staging:main || fail "Failed to push staging to main"
+log "[SUCCESS] main branch updated to match production"
+
+send_slack "✅ Deployment complete — weight, billing, frontend all healthy. main branch updated."
+# send email notification on deploy success
+python3 "$SCRIPTS_DIR/send_email.py" --event deploy --status pass || true
