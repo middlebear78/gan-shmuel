@@ -1,5 +1,6 @@
 from flask import Flask, Response, request, jsonify
 from datetime import datetime
+from sqlalchemy import text
 import os
 import csv
 import json
@@ -138,7 +139,11 @@ def calculate_neto(bruto, truck_tara, container_ids):
 
 @app.get("/health")
 def health():
-    return Response("OK", status=200, mimetype="text/plain")
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "OK"}), 200
+    except Exception as e:
+        return jsonify({"status": "Failure", "error": str(e)}), 500
 
 
 @app.post("/weight")
