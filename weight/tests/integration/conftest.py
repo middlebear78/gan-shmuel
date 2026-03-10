@@ -29,56 +29,11 @@ def client():
 
         db.session.commit()
 
-        # --- Dates ---
-        now = datetime.now()
-        current_month = now.replace(day=5) 
-        # Safely calculate last month and last year
-        last_month = (now.replace(day=1) - timedelta(days=1)).replace(day=20)
-        last_year = now.replace(year=now.year-1, month=6, day=15)
-        
-        # --- Transactions ---
-        
-        transactions_to_add = [
-            # Session 1: T-123 (Current Month) - Complete
-            {"datetime": current_month, "direction": "in", "truck": "T-123", "containers": "C-101,C-102", "bruto": 15000, "session_id": 1},
-            {"datetime": current_month, "direction": "out", "truck": "T-123", "containers": "C-101,C-102", "bruto": 15000, "truckTara": 5000, "session_id": 1},
-            
-            # Session 2: T-123 (Last Month) - Complete
-            {"datetime": last_month, "direction": "in", "truck": "T-123", "containers": "C-103", "bruto": 12000, "session_id": 2},
-            {"datetime": last_month, "direction": "out", "truck": "T-123", "containers": "C-103", "bruto": 12000, "truckTara": 5200, "session_id": 2},
-            
-            # NEW Session 3: Standalone container C-777 (Current Month)
-            {"datetime": current_month, "direction": "none", "truck": "na", "containers": "C-777", "bruto": 800, "session_id": 3},
-            
-            # NEW Session 4: T-456 Open Session (In only) - (Current Month)
-            {"datetime": current_month, "direction": "in", "truck": "T-456", "containers": "C-101", "bruto": 14000, "session_id": 4},
-            
-            # NEW Session 5: T-888 (Last Year) - Complete
-            {"datetime": last_year, "direction": "in", "truck": "T-888", "containers": "C-101", "bruto": 16000, "session_id": 5},
-            {"datetime": last_year, "direction": "out", "truck": "T-888", "containers": "C-101", "bruto": 16000, "truckTara": 6000, "session_id": 5},
-
-            # NEW Session 6: Historical data for T-123 (Last Year)
-            {"datetime": last_year, "direction": "in", "truck": "T-789", "containers": "C-101", "bruto": 20000, "session_id": 6},
-            {"datetime": last_year, "direction": "out", "truck": "T-789", "containers": "C-101", "bruto": 20000, "truckTara": 5100, "session_id": 6}
-        ]
-
-        # Iterate, check for existence, and add to the session
-        for t_data in transactions_to_add:
-            # Check if a transaction with this session_id and direction already exists
-            exists = Transaction.query.filter_by(
-                session_id=t_data["session_id"], 
-                direction=t_data["direction"]
-            ).first()
-            
-            if not exists:
-                db.session.add(Transaction(**t_data))
-            
-        # Commit all containers and transactions at once
-        db.session.commit()
+        max_id = db.session.query(db.func.max(Transaction.id)).scalar() or 0
+        existing_containers = {c.container_id for c in ContainerRegistered.query.all()}
 
         yield app.test_client()
 
-        
         db.session.remove()
         Transaction.query.filter(Transaction.id > max_id).delete()
         ContainerRegistered.query.filter(

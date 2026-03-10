@@ -73,19 +73,15 @@ def test_json_inserts_records(client):
 def test_csv_upsert_updates_existing(client):
     """Running the same file twice should update, not duplicate."""
     client.post("/batch-weight", data={"file": "containers1.csv"})
-
-    from models import ContainerRegistered
-    count_after_first = ContainerRegistered.query.filter(
-        ContainerRegistered.container_id.like("C-%")
-    ).count()
-
     res = client.post("/batch-weight", data={"file": "containers1.csv"})
     assert res.status_code == 200
 
-    count_after_second = ContainerRegistered.query.filter(
+    # Verify no duplicates — count should equal file rows, not double
+    from models import ContainerRegistered
+    count = ContainerRegistered.query.filter(
         ContainerRegistered.container_id.like("C-%")
     ).count()
-    assert count_after_first == count_after_second
+    assert count == 36
 
 
 # --- JSON via JSON body ---
