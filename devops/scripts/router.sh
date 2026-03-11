@@ -208,14 +208,14 @@ if [ "$EVENT" = "push" ]; then
 
     # ----------------------------------------------------
     # DECIDE WHETHER TO DEPLOY
-    # Any change to billing/, weight/, or frontend/
-    # triggers a full production deploy.
+    # Any change to billing/, weight/, frontend/,
+    # compose files, or devops/ triggers a full deploy.
     # ----------------------------------------------------
     RUN_DEPLOY=false
 
     while IFS= read -r file; do
         case "$file" in
-            billing/* | weight/* | frontend/*)
+            billing/* | weight/* | frontend/* | compose* | devops/*)
                 RUN_DEPLOY=true
                 ;;
         esac
