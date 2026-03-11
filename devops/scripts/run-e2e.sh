@@ -22,15 +22,13 @@ LOGFILE="$LOGDIR/e2e-$(date +'%Y%m%d-%H%M%S').log"
 mkdir -p "$LOGDIR"
 
 # ----------------------------------------------------
-# LOAD SERVICE URLs FROM .env FILES
-# The URLs are defined in the .env files inside each
-# service folder on the EC2 (billing/.env, weight/.env).
-# We source them so the script uses whatever is configured
-# there — no hardcoded URLs anywhere.
+# LOAD SERVICE URLs
+# URLs come from .env.webhook (loaded by systemd into
+# the webhook environment). No need to source service
+# .env files — those get overwritten by git reset.
 # ----------------------------------------------------
-[ -f "$STAGING_DIR/billing/.env" ] && . "$STAGING_DIR/billing/.env"
-BILLING_URL="${BILLING_URL_TEST:?BILLING_URL_TEST is not set in billing/.env}"
-WEIGHT_URL="${WEIGHT_URL_TEST:?WEIGHT_URL_TEST is not set in billing/.env}"
+BILLING_URL="${BILLING_URL_TEST:?BILLING_URL_TEST is not set — add it to .env.webhook}"
+WEIGHT_URL="${WEIGHT_URL_TEST:?WEIGHT_URL_TEST is not set — add it to .env.webhook}"
 
 log() {
     local msg="$1"
@@ -78,6 +76,17 @@ cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
 # the current user, not root.
 # ----------------------------------------------------
 mkdir -p "$STAGING_DIR/tests/e2e/in"
+
+# ----------------------------------------------------
+# TEAR DOWN ANY LEFTOVER CONTAINERS
+# Single-service tests or manual runs may have left
+# containers on conflicting ports (80, 8090). Kill
+# them before starting E2E.
+# ----------------------------------------------------
+log "[INFO] Cleaning up any leftover containers..."
+cd "$STAGING_DIR/weight" && docker compose -f docker-compose-dev.yaml down -v 2>/dev/null || true
+cd "$STAGING_DIR/billing" && docker compose -f docker-compose.yml down -v 2>/dev/null || true
+cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
 
 # ----------------------------------------------------
 # START ALL SERVICES
