@@ -4,7 +4,7 @@ from models import db, Provider
 provider_bp = Blueprint("provider", __name__)
 
 def checkProviderExists(providerName: str):
-    return Provider.query.filter(db.func.lower(Provider.name) == providerName.lower()).first()
+    return db.session.query(Provider).filter(db.func.lower(Provider.name) == providerName.lower()).first()
 
 @provider_bp.route("/provider", methods=["POST"])
 def new_provider():
@@ -30,7 +30,7 @@ def update_provider(provider_id):
     if not new_name:
         return jsonify({"error": "Provider name is required"}), 400
 
-    provider = Provider.query.get(provider_id)
+    provider = db.session.get(Provider, provider_id)
     if not provider:
         return jsonify({"error": "Provider not found"}), 404
 

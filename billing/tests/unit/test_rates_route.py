@@ -64,8 +64,8 @@ def test_post_rates_success_with_all_scope(client, app, temp_in_dir):
     assert data["updated"] == 0
 
     with app.app_context():
-        rates = Rate.query.all()
-        latest_file = RatesFile.query.first()
+        rates = db.session.query(Rate).all()
+        latest_file = db.session.query(RatesFile).first()
 
         assert len(rates) == 3
         assert latest_file is not None
@@ -95,7 +95,7 @@ def test_post_rates_success_with_provider_scope(client, app, temp_in_dir):
     assert data["updated"] == 0
 
     with app.app_context():
-        rate = Rate.query.filter_by(product_id="Mandarin", scope=str(provider_id)).first()
+        rate = db.session.query(Rate).filter_by(product_id="Mandarin", scope=str(provider_id)).first()
         assert rate is not None
         assert rate.rate == 120
 
@@ -158,7 +158,7 @@ def test_post_rates_updates_existing_rate(client, app, temp_in_dir):
     assert second_data["updated"] == 1
 
     with app.app_context():
-        rate = Rate.query.filter_by(product_id="Navel", scope="ALL").first()
+        rate = db.session.query(Rate).filter_by(product_id="Navel", scope="ALL").first()
         assert rate is not None
         assert rate.rate == 99
 

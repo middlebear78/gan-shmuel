@@ -22,7 +22,7 @@ def _normalize_scope(scope_raw: str) -> str:
 
     provider_id = int(s)
 
-    if Provider.query.get(provider_id) is None:
+    if db.session.get(Provider, provider_id) is None:
         raise ValueError(f"Provider id in Scope does not exist: {provider_id}")
 
     return str(provider_id)
@@ -104,7 +104,7 @@ def post_rates():
         updated = 0
 
         for row in rows:
-            existing = Rate.query.filter_by(
+            existing = db.session.query(Rate).filter_by(
                 product_id=row["product_id"],
                 scope=row["scope"]
             ).first()
@@ -123,7 +123,7 @@ def post_rates():
                 inserted += 1
 
         # save the latest uploaded file name
-        latest_file = RatesFile.query.first()
+        latest_file = db.session.query(RatesFile).first()
 
         if latest_file:
             latest_file.filename = safe_name
@@ -157,7 +157,7 @@ def get_rates():
     Returns the same excel file that was last uploaded using POST /rates
     """
     try:
-        latest_file = RatesFile.query.first()
+        latest_file = db.session.query(RatesFile).first()
 
         if latest_file is None:
             return jsonify({"error": "no rates file uploaded yet"}), 404

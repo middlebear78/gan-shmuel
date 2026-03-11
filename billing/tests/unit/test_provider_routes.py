@@ -28,7 +28,7 @@ def test_post_provider_success(client, app):
     assert "id" in data
 
     with app.app_context():
-        provider = Provider.query.filter_by(name="Test Provider").first()
+        provider = db.session.query(Provider).filter_by(name="Test Provider").first()
         assert provider is not None
         assert str(provider.id) == data["id"]
 
@@ -88,7 +88,7 @@ def test_put_provider_success(client, app):
     assert data["name"] == "New Name"
 
     with app.app_context():
-        updated_provider = Provider.query.get(provider_id)
+        updated_provider = db.session.get(Provider, provider_id)
         assert updated_provider is not None
         assert updated_provider.name == "New Name"
 

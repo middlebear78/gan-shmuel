@@ -31,7 +31,7 @@ def test_provider_create_then_update_flow(client, app):
     provider_id = int(create_data["id"])
 
     with app.app_context():
-        provider = Provider.query.get(provider_id)
+        provider = db.session.get(Provider, provider_id)
         assert provider is not None
         assert provider.name == "Gan Provider"
 
@@ -46,7 +46,7 @@ def test_provider_create_then_update_flow(client, app):
     assert update_data["name"] == "Gan Provider Updated"
 
     with app.app_context():
-        provider = Provider.query.get(provider_id)
+        provider = db.session.get(Provider, provider_id)
         assert provider is not None
         assert provider.name == "Gan Provider Updated"
 
@@ -65,7 +65,7 @@ def test_provider_duplicate_flow_case_insensitive(client, app):
     assert second_data["error"] == "Provider 'fresh fruits' already exists"
 
     with app.app_context():
-        providers = Provider.query.all()
+        providers = db.session.query(Provider).all()
         assert len(providers) == 1
         assert providers[0].name == "Fresh Fruits"
 
@@ -90,8 +90,8 @@ def test_provider_update_to_existing_other_provider_name_fails(client, app):
     assert update_data["error"] == "Provider 'Provider A' already exists"
 
     with app.app_context():
-        provider_a = Provider.query.get(first_id)
-        provider_b = Provider.query.get(second_id)
+        provider_a = db.session.get(Provider, first_id)
+        provider_b = db.session.get(Provider, second_id)
 
         assert provider_a.name == "Provider A"
         assert provider_b.name == "Provider B"
@@ -105,4 +105,4 @@ def test_provider_validation_flow_missing_name(client, app):
     assert data["error"] == "Provider name is required"
 
     with app.app_context():
-        assert Provider.query.count() == 0
+        assert db.session.query(Provider).count() == 0

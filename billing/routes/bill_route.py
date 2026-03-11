@@ -39,7 +39,7 @@ def resolve_time_range(from_timeStamp, to_timeStamp):
     return start, end
 
 def get_provider_trucks(provider_id):
-    trucks = Truck.query.filter_by(provider_id=provider_id).all()
+    trucks = db.session.query(Truck).filter_by(provider_id=provider_id).all()
     # extract just the id from each Truck object into a flat list
     return [truck.id for truck in trucks]
 
@@ -122,7 +122,7 @@ def generate_bill(provider, start, end):
 
     # now look up the billing rates — each Rate row maps a product to a price per kg
     # scoped to this provider's ID
-    rates_query = Rate.query.filter_by(scope=provider.id).all()
+    rates_query = db.session.query(Rate).filter_by(scope=provider.id).all()
     # turn the list of Rate objects into a dict: {"oranges": 5, "tomatoes": 3, ...}
     rates_map = {r.product_id: r.rate for r in rates_query}
 

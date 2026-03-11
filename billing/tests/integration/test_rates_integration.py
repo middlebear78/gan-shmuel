@@ -61,8 +61,8 @@ def test_rates_full_flow_all_scope_post_then_get(client, app, temp_in_dir):
     assert post_data["updated"] == 0
 
     with app.app_context():
-        assert Rate.query.count() == 3
-        latest_file = RatesFile.query.first()
+        assert db.session.query(Rate).count() == 3
+        latest_file = db.session.query(RatesFile).first()
         assert latest_file is not None
         assert latest_file.filename == "rates.xlsx"
 
@@ -98,8 +98,8 @@ def test_rates_full_flow_with_provider_scope(client, app, temp_in_dir):
     assert post_data["inserted"] == 2
 
     with app.app_context():
-        rate1 = Rate.query.filter_by(product_id="Valencia", scope=str(provider_id)).first()
-        rate2 = Rate.query.filter_by(product_id="Tangerine", scope=str(provider_id)).first()
+        rate1 = db.session.query(Rate).filter_by(product_id="Valencia", scope=str(provider_id)).first()
+        rate2 = db.session.query(Rate).filter_by(product_id="Tangerine", scope=str(provider_id)).first()
 
         assert rate1 is not None
         assert rate1.rate == 90
@@ -137,10 +137,10 @@ def test_rates_reupload_updates_existing_rows_and_latest_file(client, app, temp_
     assert second_data["updated"] == 1
 
     with app.app_context():
-        navel = Rate.query.filter_by(product_id="Navel", scope="ALL").first()
-        blood = Rate.query.filter_by(product_id="Blood", scope="ALL").first()
-        clementine = Rate.query.filter_by(product_id="Clementine", scope="ALL").first()
-        latest_file = RatesFile.query.first()
+        navel = db.session.query(Rate).filter_by(product_id="Navel", scope="ALL").first()
+        blood = db.session.query(Rate).filter_by(product_id="Blood", scope="ALL").first()
+        clementine = db.session.query(Rate).filter_by(product_id="Clementine", scope="ALL").first()
+        latest_file = db.session.query(RatesFile).first()
 
         assert navel is not None
         assert navel.rate == 99
@@ -171,8 +171,8 @@ def test_rates_invalid_provider_scope_flow_fails_and_does_not_save(client, app, 
     assert "Provider id in Scope does not exist" in data["details"]
 
     with app.app_context():
-        assert Rate.query.count() == 0
-        assert RatesFile.query.count() == 0
+        assert db.session.query(Rate).count() == 0
+        assert db.session.query(RatesFile).count() == 0
 
 
 def test_rates_get_without_uploaded_file_record(client, app):

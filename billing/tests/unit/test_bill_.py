@@ -47,10 +47,10 @@ def make_provider():
 def mock_fetch_session(session_id):
     return mock_sessions.get(session_id)
 
-@patch("routes.bill_route.Rate")                                                 # Arg 1
+@patch("routes.bill_route.db")                                                   # Arg 1
 @patch("routes.bill_route.get_provider_trucks", return_value=["TR001", "TR002"]) # Arg 2
 @patch("routes.bill_route.fetch_weights")                                        # Arg 3
-def test_generate_bill(mock_weights_fn, mock_trucks_fn, mock_rate_model):
+def test_generate_bill(mock_weights_fn, mock_trucks_fn, mock_db):
     # 1. Update mock_weights to include the 'truck' key your code expects
     processed_weights = []
     for w in mock_weights:
@@ -58,11 +58,11 @@ def test_generate_bill(mock_weights_fn, mock_trucks_fn, mock_rate_model):
         w_with_truck = w.copy()
         w_with_truck["truck"] = mock_sessions.get(w["id"], {}).get("truck")
         processed_weights.append(w_with_truck)
-    
+
     mock_weights_fn.return_value = processed_weights
 
-    # 2. Setup Rate mock
-    mock_rate_model.query.filter_by.return_value.all.return_value = [
+    # 2. Setup Rate mock via db.session.query(Rate).filter_by(...)
+    mock_db.session.query.return_value.filter_by.return_value.all.return_value = [
         MagicMock(product_id=r["product_id"], rate=r["rate"])
         for r in mock_rates if r["scope"] == 1
     ]
