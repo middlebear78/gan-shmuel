@@ -254,7 +254,7 @@ function setupSessionLookup() {
         if (data.neto !== undefined) rows.push([t('neto'), data.neto === 'na' ? 'N/A' : data.neto + ' kg']);
         result.innerHTML = descTable(rows);
       }
-    } catch { showToast(t('error'), 'error'); }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
     finally { btnLoading(btn, false); }
   }
 
@@ -329,7 +329,7 @@ function setupUnknownContainers() {
         html += '</tbody></table>';
         list.innerHTML = html;
       }
-    } catch { showToast(t('error'), 'error'); }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
   });
 }
 
@@ -358,7 +358,7 @@ function setupTruckBill() {
           [t('sessions'), sessionsHtml],
         ]);
       }
-    } catch { showToast(t('error'), 'error'); }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
     finally { btnLoading(btn, false); }
   }
 
@@ -539,7 +539,7 @@ function setupTrucks() {
           [t('sessions'), sessionsHtml],
         ]);
       }
-    } catch { showToast(t('error'), 'error'); }
+    } catch (err) { showToast(err.message || t('error'), 'error'); }
     finally { btnLoading(lookupBtn, false); }
   }
 

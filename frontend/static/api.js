@@ -54,7 +54,9 @@ async function batchWeight(filename) {
 async function getSession(id) {
   const res = await fetch('/api/weight/session/' + id);
   if (res.status === 404) return null;
-  return await res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'error');
+  return data;
 }
 
 async function getItem(id, from, to) {
@@ -81,7 +83,9 @@ async function getUnknownContainers() {
 async function getTruck(id) {
   const res = await fetch('/api/billing/truck/' + id);
   if (res.status === 404) return null;
-  return await res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'error');
+  return data;
 }
 
 async function createProvider(name) {
