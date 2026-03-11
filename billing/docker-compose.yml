@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mariadb:10.11
+    image: mysql:9.0.1-oraclelinux9
     container_name: billing-mysql
     env_file:
       - .env
