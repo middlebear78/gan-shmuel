@@ -27,7 +27,7 @@ services:
       mysql:
         condition: service_healthy
     volumes:
-        -./in:/app/in
+      - ./in:/app/in 
 
 volumes:
   billing-mysql_data:
