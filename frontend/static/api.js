@@ -143,11 +143,12 @@ async function updateTruck(id, provider) {
   return data;
 }
 
-async function uploadRates(filename) {
-  const res = await fetch('/api/billing/rates', {
+async function uploadRates(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/billing/upload', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file: filename }),
+    body: formData,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || data.details || 'error');
