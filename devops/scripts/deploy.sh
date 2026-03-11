@@ -140,21 +140,21 @@ $COMPOSE_CMD up --build -d || fail "production deploy compose up failed"
 # ----------------------------------------------------
 # WAIT FOR SERVICES TO BE HEALTHY
 # Poll each service's /health endpoint every 2 seconds.
-# Timeout after 90 seconds (45 attempts x 2 seconds).
+# Timeout after 180 seconds (90 attempts x 2 seconds).
 # Both must be up before we run tests.
 # ----------------------------------------------------
 log "[INFO] Waiting for weight service ($WEIGHT_URL)..."
-for i in {1..45}; do
+for i in {1..90}; do
     curl -sf "$WEIGHT_URL/health" > /dev/null 2>&1 && break
-    [ "$i" -eq 45 ] && fail "deploy weight not healthy in 90s"
+    [ "$i" -eq 90 ] && fail "deploy weight not healthy in 180s"
     sleep 2
 done
 log "[INFO] Weight service is healthy"
 
 log "[INFO] Waiting for billing service ($BILLING_URL)..."
-for i in {1..45}; do
+for i in {1..90}; do
     curl -sf "$BILLING_URL/health" > /dev/null 2>&1 && break
-    [ "$i" -eq 45 ] && fail "deploy billing not healthy in 90s"
+    [ "$i" -eq 90 ] && fail "deploy billing not healthy in 180s"
     sleep 2
 done
 log "[INFO] Billing service is healthy"
@@ -166,9 +166,9 @@ log "[INFO] Billing service is healthy"
 # ----------------------------------------------------
 FRONTEND_URL="${FRONTEND_URL_PROD:-http://localhost:8083}"
 log "[INFO] Waiting for frontend service ($FRONTEND_URL)..."
-for i in {1..45}; do
+for i in {1..90}; do
     curl -sf "$FRONTEND_URL/" > /dev/null 2>&1 && break
-    [ "$i" -eq 45 ] && fail "deploy frontend not healthy in 90s"
+    [ "$i" -eq 90 ] && fail "deploy frontend not healthy in 180s"
     sleep 2
 done
 log "[INFO] Frontend service is healthy"
