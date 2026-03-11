@@ -133,9 +133,10 @@ if [ "$EVENT" = "pull_request" ]; then
         exit 0
     fi
 
-    # Export COMMIT_SHA so the test scripts can post
-    # GitHub commit status (green checkmark / red X)
+    # Export COMMIT_SHA and PR_BRANCH so the test scripts
+    # can post GitHub commit status and checkout the right code
     export COMMIT_SHA
+    export PR_BRANCH
 
     # ----------------------------------------------------
     # TWO-TIER ROUTING

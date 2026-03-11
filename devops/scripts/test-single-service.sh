@@ -168,7 +168,9 @@ test_weight() {
     cd "$WORKDIR" || fail "Moving to weight WORKDIR failed"
     git fetch origin || fail "weight git fetch failed"
     sudo chown -R ubuntu:ubuntu "$WORKDIR" 2>/dev/null || true
-    git reset --hard "origin/$SERVICE" || fail "weight git reset failed"
+    # Use PR branch if set (from router), otherwise fall back to service branch
+    local RESET_BRANCH="${PR_BRANCH:-$SERVICE}"
+    git reset --hard "origin/$RESET_BRANCH" || fail "weight git reset to $RESET_BRANCH failed"
     # restore .env (not tracked by git, needed for compose)
     cp "$SCRIPTS_DIR/.env.weight" "$WORKDIR/.env" 2>/dev/null || true
 
@@ -233,7 +235,9 @@ test_billing() {
     cd "$WORKDIR" || fail "Moving to billing WORKDIR failed"
     git fetch origin || fail "billing git fetch failed"
     sudo chown -R ubuntu:ubuntu "$WORKDIR" 2>/dev/null || true
-    git reset --hard "origin/$SERVICE" || fail "billing git reset failed"
+    # Use PR branch if set (from router), otherwise fall back to service branch
+    local RESET_BRANCH="${PR_BRANCH:-$SERVICE}"
+    git reset --hard "origin/$RESET_BRANCH" || fail "billing git reset to $RESET_BRANCH failed"
     # restore .env (not tracked by git, needed for compose)
     cp "$SCRIPTS_DIR/.env.billing" "$WORKDIR/.env" 2>/dev/null || true
 
