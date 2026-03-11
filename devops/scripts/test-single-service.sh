@@ -239,7 +239,7 @@ test_billing() {
     check_health "$COMPOSE_FILE" "mysql" "billing mysql"
 
     local B_APP
-    B_APP="$(docker compose -f "$COMPOSE_FILE" ps -q app)"
+    B_APP="$(docker compose -f "$COMPOSE_FILE" ps -q billing-app)"
     [ -n "$B_APP" ] || fail "billing app container was not created"
 
     log "[INFO] Waiting for billing app to respond on /health..."
