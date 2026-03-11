@@ -177,7 +177,7 @@ test_weight() {
     log "[INFO] Waiting for weight app to respond on /health..."
     local w_app_healthy=false
     for i in {1..24}; do
-        if docker exec "$W_APP" curl -sf http://localhost:5000/health > /dev/null 2>&1; then
+        if docker exec "$W_APP" python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')" > /dev/null 2>&1; then
             w_app_healthy=true
             break
         fi
@@ -232,7 +232,7 @@ test_billing() {
     log "[INFO] Waiting for billing app to respond on /health..."
     local b_app_healthy=false
     for i in {1..24}; do
-        if docker exec "$B_APP" curl -sf http://localhost:5000/health > /dev/null 2>&1; then
+        if docker exec "$B_APP" python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')" > /dev/null 2>&1; then
             b_app_healthy=true
             break
         fi

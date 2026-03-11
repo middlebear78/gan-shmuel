@@ -51,6 +51,13 @@ fail() {
     exit 1
 }
 
+send_slack() {
+    local text="$1"
+    curl -s -X POST -H 'Content-type: application/json' \
+      --data "{\"text\":\"$text\"}" \
+      "${SLACK_URL:-}" > /dev/null 2>&1 || true
+}
+
 log "========================================"
 log "[INFO] Router triggered — event=$EVENT"
 
@@ -85,9 +92,27 @@ if [ "$EVENT" = "pull_request" ]; then
 
     log "[INFO] PR #$PR_NUM: action=$ACTION, branch=$PR_BRANCH -> $BASE_BRANCH, sha=$COMMIT_SHA"
 
-    # Only react to "opened" (new PR) or "synchronize" (new commits pushed).
-    # Ignore everything else: closed, labeled, assigned, etc.
-    if [ "$ACTION" != "opened" ] && [ "$ACTION" != "synchronize" ]; then
+    # Slack notify on closed (merged or not)
+    if [ "$ACTION" = "closed" ]; then
+        MERGED=$(jq -r '.pull_request.merged' "$TMP")
+        if [ "$MERGED" = "true" ]; then
+            send_slack ":merged: PR #$PR_NUM merged: $PR_BRANCH → $BASE_BRANCH"
+        else
+            send_slack ":no_entry_sign: PR #$PR_NUM closed (not merged): $PR_BRANCH → $BASE_BRANCH"
+        fi
+        log "[INFO] Ignoring PR action: $ACTION"
+        rm -f "$TMP"
+        exit 0
+    fi
+
+    # Slack notify on reopened
+    if [ "$ACTION" = "reopened" ]; then
+        send_slack ":recycle: PR #$PR_NUM reopened: $PR_BRANCH → $BASE_BRANCH"
+    fi
+
+    # Only run CI for opened, reopened, or synchronize.
+    # Ignore everything else: labeled, assigned, etc.
+    if [ "$ACTION" != "opened" ] && [ "$ACTION" != "reopened" ] && [ "$ACTION" != "synchronize" ]; then
         log "[INFO] Ignoring PR action: $ACTION"
         rm -f "$TMP"
         exit 0
@@ -113,19 +138,23 @@ if [ "$EVENT" = "pull_request" ]; then
     case "$BASE_BRANCH" in
         weight)
             log "[INFO] PR targets weight — running weight unit+integration tests"
+            send_slack ":test_tube: PR #$PR_NUM → weight — running unit+integration tests"
             /home/ubuntu/opt/scripts/test-single-service.sh weight &
             ;;
         billing)
             log "[INFO] PR targets billing — running billing unit+integration tests"
+            send_slack ":test_tube: PR #$PR_NUM → billing — running unit+integration tests"
             /home/ubuntu/opt/scripts/test-single-service.sh billing &
             ;;
         frontend)
             # Frontend has no tests — just verify the Docker image builds.
             log "[INFO] PR targets frontend — running frontend build check"
+            send_slack ":test_tube: PR #$PR_NUM → frontend — running build check"
             /home/ubuntu/opt/scripts/test-single-service.sh frontend &
             ;;
         staging)
             log "[INFO] PR targets staging — running E2E + frontend build"
+            send_slack ":rocket: PR #$PR_NUM → staging — running E2E + frontend build"
             /home/ubuntu/opt/scripts/test-weight-and-billing-and-frontend.sh &
             ;;
         *)
@@ -160,6 +189,7 @@ if [ "$EVENT" = "push" ]; then
 
     COMMIT_SHA=$(jq -r '.after' "$TMP")
     log "[INFO] Push to staging detected, sha=$COMMIT_SHA"
+    send_slack ":package: Push to staging detected — checking for deploy"
 
     # ----------------------------------------------------
     # DETECT WHICH FILES CHANGED
