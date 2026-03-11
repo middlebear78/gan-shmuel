@@ -30,6 +30,20 @@ set -e
 #   Push to staging (PR merged)  → run deploy
 # ----------------------------------------------------
 
+# ----------------------------------------------------
+# AUTO-SYNC SCRIPTS FROM BARE REPO
+# Every time the webhook fires, pull the latest scripts
+# from the devops branch in the bare repo. This means
+# you NEVER have to manually copy scripts to EC2 again.
+# Router.sh is the only file that needs a one-time copy.
+# ----------------------------------------------------
+BARE_REPO="/home/ubuntu/opt/gan-shmuel.git"
+SCRIPTS_DIR="/home/ubuntu/opt/scripts"
+git --git-dir="$BARE_REPO" fetch 2>/dev/null || true
+git --git-dir="$BARE_REPO" archive devops -- devops/scripts/ 2>/dev/null \
+  | tar -xf - --strip-components=2 -C "$SCRIPTS_DIR" 2>/dev/null || true
+chmod +x "$SCRIPTS_DIR"/*.sh 2>/dev/null || true
+
 EVENT="$1"
 PAYLOAD="$2"
 LOGFILE="/home/ubuntu/opt/scripts/.logs/router.log"
