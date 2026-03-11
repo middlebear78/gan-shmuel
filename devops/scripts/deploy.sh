@@ -123,20 +123,23 @@ log "[INFO] === Deployment started ==="
 cd "$PROD_DIR" || fail "Cannot cd to $PROD_DIR"
 
 # ----------------------------------------------------
-# PULL LATEST CODE FROM STAGING INTO PRODUCTION DIR
-# The production directory on EC2 may be stale from the
-# last deploy. We always pull the latest staging code
-# before building so Docker gets the newest source files.
+# PULL LATEST CODE FROM BARE REPO INTO PRODUCTION DIR
+# The bare repo at /home/ubuntu/opt/gan-shmuel.git
+# receives pushes from GitHub. We use git archive to
+# export the latest staging branch into /production.
+# This doesn't require /production to be a git repo.
 #
 # chown is needed because Docker sometimes creates files
-# as root (__pycache__, .pyc) which block git reset.
+# as root (__pycache__, .pyc) which block the export.
 # ----------------------------------------------------
-log "[INFO] Pulling latest code from origin/staging..."
-git fetch origin || fail "git fetch failed"
+BARE_REPO="/home/ubuntu/opt/gan-shmuel.git"
+log "[INFO] Exporting latest staging code into $PROD_DIR..."
+cd "$BARE_REPO" && git fetch origin staging 2>/dev/null || true
 sudo chown -R ubuntu:ubuntu "$PROD_DIR" 2>/dev/null || true
-git reset --hard origin/staging || fail "git reset to origin/staging failed"
-# Restore .env for compose interpolation (git reset overwrites tracked .env)
+git --git-dir="$BARE_REPO" archive origin/staging | tar -xf - -C "$PROD_DIR" || fail "git archive export failed"
+# Restore .env for compose interpolation (DB passwords etc.)
 cp "$SCRIPTS_DIR/.env.production" "$PROD_DIR/.env" 2>/dev/null || true
+cd "$PROD_DIR"
 log "[INFO] Code updated to latest staging"
 
 # ----------------------------------------------------
