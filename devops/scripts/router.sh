@@ -60,6 +60,7 @@ send_slack() {
 
 log "========================================"
 log "[INFO] Router triggered — event=$EVENT"
+# v2 — full pipeline test
 
 # ----------------------------------------------------
 # Save the JSON payload to a temp file so we can parse
