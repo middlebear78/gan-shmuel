@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from models import db, Provider, Truck, Rate
 from config import Config, TestConfig
 
+
 # routes Imports
 from routes.provider_routes import provider_bp
 from routes.healthCheck_route import health_bp
