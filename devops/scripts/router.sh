@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ----------------------------------------------------
 # ROUTER — the entry point for ALL GitHub webhook events.
@@ -29,6 +28,20 @@ set -e
 #   PR targeting staging         → run E2E + frontend build
 #   Push to staging (PR merged)  → run deploy
 # ----------------------------------------------------
+
+# ----------------------------------------------------
+# AUTO-SYNC SCRIPTS FROM BARE REPO
+# Every time the webhook fires, pull the latest scripts
+# from the devops branch in the bare repo. This means
+# you NEVER have to manually copy scripts to EC2 again.
+# Router.sh is the only file that needs a one-time copy.
+# ----------------------------------------------------
+BARE_REPO="/home/ubuntu/opt/gan-shmuel.git"
+SCRIPTS_DIR="/home/ubuntu/opt/scripts"
+git --git-dir="$BARE_REPO" fetch origin devops:devops 2>/dev/null || true
+git --git-dir="$BARE_REPO" archive devops -- devops/scripts/ 2>/dev/null \
+  | tar -xf - --strip-components=2 -C "$SCRIPTS_DIR" 2>/dev/null || true
+chmod +x "$SCRIPTS_DIR"/*.sh 2>/dev/null || true
 
 EVENT="$1"
 PAYLOAD="$2"
@@ -119,9 +132,10 @@ if [ "$EVENT" = "pull_request" ]; then
         exit 0
     fi
 
-    # Export COMMIT_SHA so the test scripts can post
-    # GitHub commit status (green checkmark / red X)
+    # Export COMMIT_SHA and PR_BRANCH so the test scripts
+    # can post GitHub commit status and checkout the right code
     export COMMIT_SHA
+    export PR_BRANCH
 
     # ----------------------------------------------------
     # TWO-TIER ROUTING

@@ -9,7 +9,7 @@ set -e
 # ----------------------------------------------------
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
-STAGING_DIR="/home/ubuntu/opt/staging"
+PROD_DIR="/home/ubuntu/opt/production"
 SCRIPTS_DIR="/home/ubuntu/opt/scripts"
 COMPOSE_CMD="docker compose -f compose.yaml -f compose.prod.yaml"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
@@ -18,18 +18,16 @@ LOGFILE="$LOGDIR/prod-$(date +'%Y%m%d-%H%M%S').log"
 mkdir -p "$LOGDIR"
 
 # ----------------------------------------------------
-# LOAD SERVICE URLs FROM .env FILES
-# The URLs are defined in the .env files inside each
-# service folder on the EC2 (billing/.env-prod, weight/.env-prod).
+# LOAD SERVICE URLs FROM .env.webhook
+# The URLs are defined in the webhook env file on the EC2.
 # We source them so the script uses whatever is configured
 # there — no hardcoded URLs anywhere.
 # ----------------------------------------------------
 
-[ -f "$STAGING_DIR/billing/.env-prod" ] && . "$STAGING_DIR/billing/.env-prod"
-[ -f "$STAGING_DIR/weight/.env-prod" ] && . "$STAGING_DIR/weight/.env-prod"
+[ -f "$SCRIPTS_DIR/.env.webhook" ] && set -a && . "$SCRIPTS_DIR/.env.webhook" && set +a
 
-BILLING_URL="${BILLING_URL_PROD:?BILLING_URL_PROD is not set in billing/.env}"
-WEIGHT_URL="${WEIGHT_URL_PROD:?WEIGHT_URL_PROD is not set in billing/.env}"
+BILLING_URL="${BILLING_URL_PROD:?BILLING_URL_PROD is not set — add it to .env.webhook}"
+WEIGHT_URL="${WEIGHT_URL_PROD:?WEIGHT_URL_PROD is not set — add it to .env.webhook}"
 
 log() {
     local msg="$1"
@@ -54,8 +52,8 @@ send_slack() {
 # working images instead.
 #
 # The app images are built by compose and named after
-# the project directory (staging) + service name:
-#   staging-weight-app, staging-billing-app, staging-frontend
+# the project directory (production) + service name:
+#   production-weight-app, production-billing-app, production-frontend
 # DB images are pulled (mysql, mariadb), not built, so
 # they don't change between deploys.
 #
@@ -63,11 +61,11 @@ send_slack() {
 # in that case a failed deploy just tears down.
 # ----------------------------------------------------
 ROLLBACK_AVAILABLE=false
-if docker image inspect staging-weight-app:latest > /dev/null 2>&1; then
+if docker image inspect production-weight-app:latest > /dev/null 2>&1; then
     log "[INFO] Tagging current images as :prev for rollback..."
-    docker tag staging-weight-app:latest staging-weight-app:prev
-    docker tag staging-billing-app:latest staging-billing-app:prev
-    docker tag staging-frontend:latest staging-frontend:prev
+    docker tag production-weight-app:latest production-weight-app:prev
+    docker tag production-billing-app:latest production-billing-app:prev
+    docker tag production-frontend:latest production-frontend:prev
     ROLLBACK_AVAILABLE=true
     log "[INFO] Rollback images saved"
 fi
@@ -91,20 +89,20 @@ cleanup() {
 
     if [ "$ROLLBACK_AVAILABLE" = true ]; then
         log "[INFO] Deploy failed — rolling back to previous images..."
-        cd "$STAGING_DIR"
+        cd "$PROD_DIR"
         # stop the broken containers (no -v, keep DB volumes)
         $COMPOSE_CMD down --remove-orphans 2>/dev/null || true
         # restore the previous working images
-        docker tag staging-weight-app:prev staging-weight-app:latest
-        docker tag staging-billing-app:prev staging-billing-app:latest
-        docker tag staging-frontend:prev staging-frontend:latest
+        docker tag production-weight-app:prev production-weight-app:latest
+        docker tag production-billing-app:prev production-billing-app:latest
+        docker tag production-frontend:prev production-frontend:latest
         # bring up with the old images (--no-build skips rebuild)
         $COMPOSE_CMD up -d --no-build 2>/dev/null || true
         log "[INFO] Rollback complete — previous version restored"
         send_slack "⚠️ Deploy failed — rolled back to previous working version"
     else
         log "[INFO] No previous images — tearing down failed deploy..."
-        cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
+        cd "$PROD_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
         log "[INFO] Cleanup complete"
     fi
 }
@@ -122,22 +120,26 @@ fail() {
 
 log "[INFO] === Deployment started ==="
 
-cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
+cd "$PROD_DIR" || fail "Cannot cd to $PROD_DIR"
 
 # ----------------------------------------------------
-# PULL LATEST CODE FROM STAGING
-# The staging directory on EC2 may be stale if previous
-# deploys or manual work left it behind. We always pull
-# the latest code from origin/staging before building
-# so Docker gets the newest source files.
+# PULL LATEST CODE FROM BARE REPO INTO PRODUCTION DIR
+# The bare repo at /home/ubuntu/opt/gan-shmuel.git
+# receives pushes from GitHub. We use git archive to
+# export the latest staging branch into /production.
+# This doesn't require /production to be a git repo.
 #
 # chown is needed because Docker sometimes creates files
-# as root (__pycache__, .pyc) which block git reset.
+# as root (__pycache__, .pyc) which block the export.
 # ----------------------------------------------------
-log "[INFO] Pulling latest code from origin/staging..."
-git fetch origin || fail "git fetch failed"
-sudo chown -R ubuntu:ubuntu "$STAGING_DIR" 2>/dev/null || true
-git reset --hard origin/staging || fail "git reset to origin/staging failed"
+BARE_REPO="/home/ubuntu/opt/gan-shmuel.git"
+log "[INFO] Exporting latest staging code into $PROD_DIR..."
+git --git-dir="$BARE_REPO" fetch origin staging:staging 2>/dev/null || true
+sudo chown -R ubuntu:ubuntu "$PROD_DIR" 2>/dev/null || true
+git --git-dir="$BARE_REPO" archive staging | tar -xf - -C "$PROD_DIR" || fail "git archive export failed"
+# Restore .env for compose interpolation (DB passwords etc.)
+cp "$SCRIPTS_DIR/.env.production" "$PROD_DIR/.env" 2>/dev/null || true
+cd "$PROD_DIR"
 log "[INFO] Code updated to latest staging"
 
 # ----------------------------------------------------

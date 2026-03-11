@@ -165,9 +165,15 @@ test_weight() {
     }
     trap cleanup EXIT
 
-    cd "$WORKDIR" || fail "Moving to weight WORKDIR failed"
+    cd "$STAGING_DIR" || fail "Moving to staging dir failed"
     git fetch origin || fail "weight git fetch failed"
-    git reset --hard "origin/$SERVICE" || fail "weight git reset failed"
+    sudo chown -R ubuntu:ubuntu "$STAGING_DIR" 2>/dev/null || true
+    # Only update the weight folder from the PR branch — don't touch the rest of the repo
+    local RESET_BRANCH="${PR_BRANCH:-$SERVICE}"
+    git checkout "origin/$RESET_BRANCH" -- weight/ || fail "weight checkout from $RESET_BRANCH failed"
+    cd "$WORKDIR"
+    # restore .env (not tracked by git, needed for compose)
+    cp "$SCRIPTS_DIR/.env.weight" "$WORKDIR/.env" 2>/dev/null || true
 
     docker compose -f "$COMPOSE_FILE" config || fail "weight compose config failed"
     docker compose -f "$COMPOSE_FILE" build || fail "weight compose build failed"
@@ -227,9 +233,15 @@ test_billing() {
     }
     trap cleanup EXIT
 
-    cd "$WORKDIR" || fail "Moving to billing WORKDIR failed"
+    cd "$STAGING_DIR" || fail "Moving to staging dir failed"
     git fetch origin || fail "billing git fetch failed"
-    git reset --hard "origin/$SERVICE" || fail "billing git reset failed"
+    sudo chown -R ubuntu:ubuntu "$STAGING_DIR" 2>/dev/null || true
+    # Only update the billing folder from the PR branch — don't touch the rest of the repo
+    local RESET_BRANCH="${PR_BRANCH:-$SERVICE}"
+    git checkout "origin/$RESET_BRANCH" -- billing/ || fail "billing checkout from $RESET_BRANCH failed"
+    cd "$WORKDIR"
+    # restore .env (not tracked by git, needed for compose)
+    cp "$SCRIPTS_DIR/.env.billing" "$WORKDIR/.env" 2>/dev/null || true
 
     docker compose -f "$COMPOSE_FILE" config || fail "billing compose config failed"
     docker compose -f "$COMPOSE_FILE" build || fail "billing compose build failed"
