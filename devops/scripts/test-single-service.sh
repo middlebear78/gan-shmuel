@@ -167,7 +167,10 @@ test_weight() {
 
     cd "$WORKDIR" || fail "Moving to weight WORKDIR failed"
     git fetch origin || fail "weight git fetch failed"
+    sudo chown -R ubuntu:ubuntu "$WORKDIR" 2>/dev/null || true
     git reset --hard "origin/$SERVICE" || fail "weight git reset failed"
+    # restore .env (not tracked by git, needed for compose)
+    cp "$SCRIPTS_DIR/.env.weight" "$WORKDIR/.env" 2>/dev/null || true
 
     docker compose -f "$COMPOSE_FILE" config || fail "weight compose config failed"
     docker compose -f "$COMPOSE_FILE" build || fail "weight compose build failed"
@@ -229,7 +232,10 @@ test_billing() {
 
     cd "$WORKDIR" || fail "Moving to billing WORKDIR failed"
     git fetch origin || fail "billing git fetch failed"
+    sudo chown -R ubuntu:ubuntu "$WORKDIR" 2>/dev/null || true
     git reset --hard "origin/$SERVICE" || fail "billing git reset failed"
+    # restore .env (not tracked by git, needed for compose)
+    cp "$SCRIPTS_DIR/.env.billing" "$WORKDIR/.env" 2>/dev/null || true
 
     docker compose -f "$COMPOSE_FILE" config || fail "billing compose config failed"
     docker compose -f "$COMPOSE_FILE" build || fail "billing compose build failed"
