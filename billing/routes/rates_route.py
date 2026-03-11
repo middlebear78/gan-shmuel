@@ -85,14 +85,17 @@ def _read_rates_excel(filename: str):
 
 
 @rates_bp.route("/rates", methods=["POST"])
-def post_rates():
+def post_rates(internal_filename=None):
     """
     file = excel filename that already exists in /in
     Reads Product, Rate, Scope from excel and updates Rates table.
     Also saves the latest uploaded file name for GET /rates.
     """
-    data = request.get_json(silent=True) or {}
-    filename = data.get("file") or request.form.get("file")
+    if internal_filename:
+        filename = internal_filename
+    else:
+        data = request.get_json(silent=True) or {}
+        filename = data.get("file") or request.form.get("file")
 
     if not filename:
         return jsonify({"error": "file is required (name of excel file in /in)"}), 400
@@ -180,3 +183,45 @@ def get_rates():
 
     except Exception as e:
         return jsonify({"error": "server error", "details": str(e)}), 500
+
+
+@rates_bp.route("/upload", methods=["POST"])
+def upload_file():
+    """
+    Uploads an excel file, validates columns, saves it as rates.xlsx to /in (overwriting if exists),
+    and calls post_rates to update the Rates table.
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "no file provided"}), 400
+        
+    file = request.files["file"]
+    
+    if file.filename == "":
+        return jsonify({"error": "no file selected"}), 400
+        
+    if not file.filename.endswith(".xlsx"):
+        return jsonify({"error": "file must be of type .xlsx"}), 400
+        
+    try:
+        wb = load_workbook(file, data_only=True)
+        ws = wb.active
+        
+        header = []
+        for cell in ws[1]:
+            header.append(str(cell.value).strip() if cell.value is not None else "")
+            
+        required = ["Product", "Rate", "Scope"]
+        for col in required:
+            if col not in header:
+                return jsonify({"error": f"missing column '{col}' in excel"}), 400
+                
+    except Exception as e:
+        return jsonify({"error": "invalid excel file", "details": str(e)}), 400
+        
+    path = os.path.join(IN_DIR, "rates.xlsx")
+    os.makedirs(IN_DIR, exist_ok=True)
+    
+    file.seek(0)
+    file.save(path)
+    
+    return post_rates(internal_filename="rates.xlsx")
