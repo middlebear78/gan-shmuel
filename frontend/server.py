@@ -1,6 +1,7 @@
-from flask import Flask, send_from_directory, request, Response
+from flask import Flask, send_from_directory, request, Response, jsonify
 import os
 import requests as http_client
+import json
 
 app = Flask(__name__, static_folder="static")
 
@@ -28,6 +29,26 @@ def proxy_weight(path):
 @app.route("/api/billing/<path:path>", methods=["GET", "POST", "PUT", "DELETE"])
 def proxy_billing(path):
     return proxy(f"{BILLING_URL}/{path}")
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True) or request.form.to_dict()
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "missing username or password"}), 400
+
+    try:
+        with open("admins.json", "r") as f:
+            admins = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "server configuration error: admins.json not found"}), 500
+
+    if admins.get(username) == password:
+        return jsonify({"success": True}), 200
+    else:
+        return jsonify({"error": "invalid username or password"}), 401
 
 
 @app.route("/")

@@ -62,6 +62,76 @@ function btnLoading(btn, loading) {
   }
 }
 
+// ── Auth ──
+function checkAuth() {
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const managementNav = document.querySelector('.nav-item[data-page="management"]');
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  if (isAdmin) {
+    managementNav.classList.remove('hidden');
+    loginBtn.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+  } else {
+    managementNav.classList.add('hidden');
+    loginBtn.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+
+    // If currently on management page, redirect to dashboard
+    if (document.getElementById('page-management').classList.contains('active')) {
+      navigateTo('dashboard');
+    }
+  }
+}
+
+function setupAuth() {
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const modal = document.getElementById('login-modal');
+  const closeBtn = document.getElementById('login-cancel');
+  const form = document.getElementById('login-form');
+
+  loginBtn.addEventListener('click', () => {
+    modal.classList.add('show');
+    form.querySelector('[name="username"]').focus();
+  });
+
+  closeBtn.addEventListener('click', () => {
+    modal.classList.remove('show');
+    form.reset();
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('isAdmin');
+    checkAuth();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = form.querySelector('[type="submit"]');
+    const u = form.querySelector('[name="username"]').value;
+    const p = form.querySelector('[name="password"]').value;
+
+    btnLoading(submitBtn, true);
+    try {
+      await login(u, p);
+      localStorage.setItem('isAdmin', 'true');
+      modal.classList.remove('show');
+      form.reset();
+      checkAuth();
+      showToast(t('success'), 'success');
+    } catch (err) {
+      showToast(err.message || t('error'), 'error');
+    } finally {
+      btnLoading(submitBtn, false);
+    }
+  });
+
+  // check on load
+  checkAuth();
+}
+
 // ── Navigation ──
 function navigateTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -581,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBill();
   setupProviders();
   setupTrucks();
+  setupAuth();
 
   // Ripple effect on all buttons
   document.querySelectorAll('.btn').forEach(btn => {

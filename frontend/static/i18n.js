@@ -45,6 +45,10 @@ const translations = {
     truckCount:'מספר משאיות', sessionCount:'מספר שקילות',
     product:'מוצר', count:'כמות', amount:'משקל (ק"ג)', rate:'תעריף', pay:'תשלום',
     total:'סה"כ', noData:'אין נתונים',
+    // auth
+    login:'התחבר', logout:'התנתק', adminLogin:'התחברות מנהל',
+    username:'שם משתמש', usernamePlaceholder:'הכנס שם משתמש',
+    password:'סיסמה', passwordPlaceholder:'הכנס סיסמה',
   },
   en: {
     dashboard:'Dashboard', weightNav:'Weight', billing:'Billing', management:'Management',
@@ -91,6 +95,10 @@ const translations = {
     truckCount:'Trucks', sessionCount:'Sessions',
     product:'Product', count:'Count', amount:'Amount (kg)', rate:'Rate', pay:'Pay',
     total:'Total', noData:'No data',
+    // auth
+    login:'Login', logout:'Logout', adminLogin:'Admin Login',
+    username:'Username', usernamePlaceholder:'Enter username',
+    password:'Password', passwordPlaceholder:'Enter password',
   },
 };
 
