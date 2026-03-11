@@ -7,7 +7,7 @@ from models import db, Provider, Truck, Rate
 import requests
 import os
 
-WEIGHT_API = os.getenv("WEIGHT_SERVER_URL")
+WEIGHT_API = os.getenv("WEIGHT_SERVER_URL", "http://weight-app:5000")
 
 bill_bp = Blueprint("bill", __name__)
 

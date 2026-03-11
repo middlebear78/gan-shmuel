@@ -7,7 +7,7 @@ import os
 
 truck_bp = Blueprint("truck", __name__)
 
-WEIGHT_SERVER_URL=os.getenv("WEIGHT_SERVER_URL")
+WEIGHT_SERVER_URL=os.getenv("WEIGHT_SERVER_URL", "http://weight-app:5000")
 
 @truck_bp.route("/truck", methods=["POST"])
 def new_truck():
