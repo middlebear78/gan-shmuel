@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ----------------------------------------------------
 # TEST SINGLE SERVICE — unit + integration tests
@@ -153,9 +152,16 @@ test_weight() {
     local COMPOSE_FILE="docker-compose-dev.yaml"
 
     cleanup() {
+        local exit_code=$?
         log "[INFO] Trap triggered — tearing down weight containers..."
         cd "$WORKDIR" && docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
         log "[INFO] Weight cleanup complete"
+        if [ "$exit_code" -ne 0 ]; then
+            log "[ERROR] weight tests exited with code $exit_code"
+            send_slack ":x: weight test failed (exit code $exit_code)"
+            send_email "fail" "weight tests exited with code $exit_code"
+            set_commit_status "failure" "weight tests failed"
+        fi
     }
     trap cleanup EXIT
 
@@ -208,9 +214,16 @@ test_billing() {
     local COMPOSE_FILE="docker-compose.yml"
 
     cleanup() {
+        local exit_code=$?
         log "[INFO] Trap triggered — tearing down billing containers..."
         cd "$WORKDIR" && docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
         log "[INFO] Billing cleanup complete"
+        if [ "$exit_code" -ne 0 ]; then
+            log "[ERROR] billing tests exited with code $exit_code"
+            send_slack ":x: billing test failed (exit code $exit_code)"
+            send_email "fail" "billing tests exited with code $exit_code"
+            set_commit_status "failure" "billing tests failed"
+        fi
     }
     trap cleanup EXIT
 
