@@ -165,12 +165,13 @@ test_weight() {
     }
     trap cleanup EXIT
 
-    cd "$WORKDIR" || fail "Moving to weight WORKDIR failed"
+    cd "$STAGING_DIR" || fail "Moving to staging dir failed"
     git fetch origin || fail "weight git fetch failed"
-    sudo chown -R ubuntu:ubuntu "$WORKDIR" 2>/dev/null || true
-    # Use PR branch if set (from router), otherwise fall back to service branch
+    sudo chown -R ubuntu:ubuntu "$STAGING_DIR" 2>/dev/null || true
+    # Only update the weight folder from the PR branch — don't touch the rest of the repo
     local RESET_BRANCH="${PR_BRANCH:-$SERVICE}"
-    git reset --hard "origin/$RESET_BRANCH" || fail "weight git reset to $RESET_BRANCH failed"
+    git checkout "origin/$RESET_BRANCH" -- weight/ || fail "weight checkout from $RESET_BRANCH failed"
+    cd "$WORKDIR"
     # restore .env (not tracked by git, needed for compose)
     cp "$SCRIPTS_DIR/.env.weight" "$WORKDIR/.env" 2>/dev/null || true
 
@@ -232,12 +233,13 @@ test_billing() {
     }
     trap cleanup EXIT
 
-    cd "$WORKDIR" || fail "Moving to billing WORKDIR failed"
+    cd "$STAGING_DIR" || fail "Moving to staging dir failed"
     git fetch origin || fail "billing git fetch failed"
-    sudo chown -R ubuntu:ubuntu "$WORKDIR" 2>/dev/null || true
-    # Use PR branch if set (from router), otherwise fall back to service branch
+    sudo chown -R ubuntu:ubuntu "$STAGING_DIR" 2>/dev/null || true
+    # Only update the billing folder from the PR branch — don't touch the rest of the repo
     local RESET_BRANCH="${PR_BRANCH:-$SERVICE}"
-    git reset --hard "origin/$RESET_BRANCH" || fail "billing git reset to $RESET_BRANCH failed"
+    git checkout "origin/$RESET_BRANCH" -- billing/ || fail "billing checkout from $RESET_BRANCH failed"
+    cd "$WORKDIR"
     # restore .env (not tracked by git, needed for compose)
     cp "$SCRIPTS_DIR/.env.billing" "$WORKDIR/.env" 2>/dev/null || true
 
