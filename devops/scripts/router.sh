@@ -23,10 +23,11 @@ set -e
 #   2. Figure out which files changed (billing or weight)
 #   3. Call the right test script
 #
-# TWO SCENARIOS:
-#   PR opened/updated targeting staging → run tests
-#   Push to staging (PR merged)         → run deploy
-#     (deploy.sh doesn't exist yet — coming later)
+# TWO-TIER CI:
+#   PR targeting weight/billing  → run unit+integration
+#                                   for that service only
+#   PR targeting staging         → run E2E + frontend build
+#   Push to staging (PR merged)  → run deploy
 # ----------------------------------------------------
 
 EVENT="$1"
@@ -50,8 +51,16 @@ fail() {
     exit 1
 }
 
+send_slack() {
+    local text="$1"
+    curl -s -X POST -H 'Content-type: application/json' \
+      --data "{\"text\":\"$text\"}" \
+      "${SLACK_URL:-}" > /dev/null 2>&1 || true
+}
+
 log "========================================"
 log "[INFO] Router triggered — event=$EVENT"
+# v2 — full pipeline test
 
 # ----------------------------------------------------
 # Save the JSON payload to a temp file so we can parse
@@ -63,10 +72,12 @@ printf '%s' "$PAYLOAD" > "$TMP"
 # ----------------------------------------------------
 # PULL REQUEST EVENT
 # Fires when someone opens a new PR or pushes new
-# commits to an existing PR. We only care about PRs
-# that target the staging branch. We figure out which
-# files changed by doing a git diff between the PR
-# branch and staging, then call the right test script.
+# commits to an existing PR. Routes based on the
+# target (base) branch:
+#   weight/billing → test-single-service.sh (unit+integration)
+#   frontend       → test-single-service.sh (build check only)
+#   staging        → test-weight-and-billing-and-frontend.sh
+#                    (E2E + frontend build)
 # The test script runs in the background (&) so the
 # webhook tool can return 200 to GitHub immediately
 # instead of making GitHub wait for all tests to finish.
@@ -82,74 +93,75 @@ if [ "$EVENT" = "pull_request" ]; then
 
     log "[INFO] PR #$PR_NUM: action=$ACTION, branch=$PR_BRANCH -> $BASE_BRANCH, sha=$COMMIT_SHA"
 
-    # Only react to "opened" (new PR) or "synchronize" (new commits pushed).
-    # Ignore everything else: closed, labeled, assigned, etc.
-    if [ "$ACTION" != "opened" ] && [ "$ACTION" != "synchronize" ]; then
+    # Slack notify on closed (merged or not)
+    if [ "$ACTION" = "closed" ]; then
+        MERGED=$(jq -r '.pull_request.merged' "$TMP")
+        if [ "$MERGED" = "true" ]; then
+            send_slack ":merged: PR #$PR_NUM merged: $PR_BRANCH → $BASE_BRANCH"
+        else
+            send_slack ":no_entry_sign: PR #$PR_NUM closed (not merged): $PR_BRANCH → $BASE_BRANCH"
+        fi
         log "[INFO] Ignoring PR action: $ACTION"
         rm -f "$TMP"
         exit 0
     fi
 
-    # Only care about PRs targeting staging.
-    # PRs to main, weight, billing, etc. are not our business.
-    if [ "$BASE_BRANCH" != "staging" ]; then
-        log "[INFO] PR targets $BASE_BRANCH, not staging. Ignoring."
+    # Slack notify on reopened
+    if [ "$ACTION" = "reopened" ]; then
+        send_slack ":recycle: PR #$PR_NUM reopened: $PR_BRANCH → $BASE_BRANCH"
+    fi
+
+    # Only run CI for opened, reopened, or synchronize.
+    # Ignore everything else: labeled, assigned, etc.
+    if [ "$ACTION" != "opened" ] && [ "$ACTION" != "reopened" ] && [ "$ACTION" != "synchronize" ]; then
+        log "[INFO] Ignoring PR action: $ACTION"
         rm -f "$TMP"
         exit 0
     fi
-
-    # ----------------------------------------------------
-    # DETECT WHICH FILES CHANGED
-    # We fetch both branches from the bare repo on EC2,
-    # then git diff to see which files are different
-    # between the PR branch and staging. This tells us
-    # if billing/, weight/, or both were modified.
-    # ----------------------------------------------------
-    cd /home/ubuntu/opt/gan-shmuel.git
-    git fetch origin "$PR_BRANCH" staging 2>/dev/null || true
-    CHANGED=$(git diff --name-only "origin/staging...origin/$PR_BRANCH" 2>/dev/null || echo "")
-
-    log "[INFO] Changed files in PR:"
-    while IFS= read -r file; do
-        [ -n "$file" ] && log "  - $file"
-    done <<< "$CHANGED"
-
-    # ----------------------------------------------------
-    # DECIDE WHICH TEST SCRIPT TO RUN
-    # billing changed → run billing + weight (billing depends on weight)
-    # weight changed  → run weight only
-    # neither changed → skip
-    # ----------------------------------------------------
-    RUN_BILLING=false
-    RUN_WEIGHT=false
-
-    while IFS= read -r file; do
-        case "$file" in
-            billing/*)
-                RUN_BILLING=true
-                RUN_WEIGHT=true
-                ;;
-            weight/*)
-                RUN_WEIGHT=true
-                ;;
-        esac
-    done <<< "$CHANGED"
-
-    log "[INFO] Routing decision: billing=$RUN_BILLING weight=$RUN_WEIGHT"
 
     # Export COMMIT_SHA so the test scripts can post
     # GitHub commit status (green checkmark / red X)
     export COMMIT_SHA
 
-    if [ "$RUN_BILLING" = true ]; then
-        log "[INFO] Running billing + weight tests (TEST MODE)"
-        /home/ubuntu/opt/scripts/test-billing-and-weight.sh &
-    elif [ "$RUN_WEIGHT" = true ]; then
-        log "[INFO] Running weight-only tests (TEST MODE)"
-        /home/ubuntu/opt/scripts/test-weight.sh &
-    else
-        log "[INFO] No billing/weight changes in PR. Skipping."
-    fi
+    # ----------------------------------------------------
+    # TWO-TIER ROUTING
+    # Route based on which branch the PR targets:
+    #   weight/billing  → test-single-service.sh (fast,
+    #                     unit+integration for that service)
+    #   frontend        → test-single-service.sh (build
+    #                     check only — no tests exist)
+    #   staging         → test-weight-and-billing-and-frontend.sh
+    #                     (E2E + frontend build only — unit+
+    #                     integration already passed on the
+    #                     service branch)
+    #   anything else   → ignore
+    # ----------------------------------------------------
+    case "$BASE_BRANCH" in
+        weight)
+            log "[INFO] PR targets weight — running weight unit+integration tests"
+            send_slack ":test_tube: PR #$PR_NUM → weight — running unit+integration tests"
+            /home/ubuntu/opt/scripts/test-single-service.sh weight &
+            ;;
+        billing)
+            log "[INFO] PR targets billing — running billing unit+integration tests"
+            send_slack ":test_tube: PR #$PR_NUM → billing — running unit+integration tests"
+            /home/ubuntu/opt/scripts/test-single-service.sh billing &
+            ;;
+        frontend)
+            # Frontend has no tests — just verify the Docker image builds.
+            log "[INFO] PR targets frontend — running frontend build check"
+            send_slack ":test_tube: PR #$PR_NUM → frontend — running build check"
+            /home/ubuntu/opt/scripts/test-single-service.sh frontend &
+            ;;
+        staging)
+            log "[INFO] PR targets staging — running E2E + frontend build"
+            send_slack ":rocket: PR #$PR_NUM → staging — running E2E + frontend build"
+            /home/ubuntu/opt/scripts/test-weight-and-billing-and-frontend.sh &
+            ;;
+        *)
+            log "[INFO] PR targets $BASE_BRANCH — not a CI branch. Ignoring."
+            ;;
+    esac
 
     rm -f "$TMP"
     exit 0
@@ -178,6 +190,7 @@ if [ "$EVENT" = "push" ]; then
 
     COMMIT_SHA=$(jq -r '.after' "$TMP")
     log "[INFO] Push to staging detected, sha=$COMMIT_SHA"
+    send_slack ":package: Push to staging detected — checking for deploy"
 
     # ----------------------------------------------------
     # DETECT WHICH FILES CHANGED
@@ -194,22 +207,22 @@ if [ "$EVENT" = "push" ]; then
         [ -n "$file" ] && log "  - $file"
     done <<< "$CHANGED_FILES"
 
-    RUN_BILLING=false
-    RUN_WEIGHT=false
+    # ----------------------------------------------------
+    # DECIDE WHETHER TO DEPLOY
+    # Any change to billing/, weight/, frontend/,
+    # compose files, or devops/ triggers a full deploy.
+    # ----------------------------------------------------
+    RUN_DEPLOY=false
 
     while IFS= read -r file; do
         case "$file" in
-            billing/*)
-                RUN_BILLING=true
-                RUN_WEIGHT=true
-                ;;
-            weight/*)
-                RUN_WEIGHT=true
+            billing/* | weight/* | frontend/* | compose* | devops/*)
+                RUN_DEPLOY=true
                 ;;
         esac
     done <<< "$CHANGED_FILES"
 
-    log "[INFO] Routing decision: billing=$RUN_BILLING weight=$RUN_WEIGHT"
+    log "[INFO] Routing decision: run_deploy=$RUN_DEPLOY"
 
     export COMMIT_SHA
 
@@ -217,14 +230,12 @@ if [ "$EVENT" = "push" ]; then
     # TRIGGER DEPLOY
     # deploy.sh handles: build, deploy to production,
     # smoke test, rollback if needed, push staging->main.
-    # We pass which services changed so it only deploys
-    # what's needed. Runs in background so webhook
-    # returns 200 to GitHub immediately.
-    # (deploy.sh will be created in a later step)
+    # Runs in background so webhook returns 200 to GitHub
+    # immediately.
     # ----------------------------------------------------
-    if [ "$RUN_BILLING" = true ] || [ "$RUN_WEIGHT" = true ]; then
+    if [ "$RUN_DEPLOY" = true ]; then
         log "[INFO] Running deploy mode"
-        /home/ubuntu/opt/scripts/deploy.sh "$RUN_BILLING" "$RUN_WEIGHT" &
+        /home/ubuntu/opt/scripts/deploy.sh &
     else
         log "[INFO] No relevant changes. Skipping deploy."
     fi

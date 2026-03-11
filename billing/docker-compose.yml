@@ -23,11 +23,11 @@ services:
       - .env
     ports:
       - "8090:5000"
+    volumes:
+    - /in:/app/in
     depends_on:
       mysql:
         condition: service_healthy
-    volumes:
-      - ./in:/app/in 
 
 volumes:
   billing-mysql_data:

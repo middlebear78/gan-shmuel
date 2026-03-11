@@ -3,33 +3,32 @@ set -e
 
 # ----------------------------------------------------
 # E2E TEST RUNNER (staging only — NOT production)
-# Spins up ALL services together (weight + billing)
-# using docker-compose.e2e.yml, waits for them to be
+# Spins up ALL services together (weight + billing + frontend)
+# using compose.yaml + compose.ci.yaml, waits for them to be
 # healthy, then runs the cross-service e2e pytest suite.
 # This tests that weight and billing can talk to each
 # other over real HTTP, with real databases.
-# Called by test-billing-and-weight.sh after unit +
+# Called by test-weight-and-billing-and-frontend.sh after unit +
 # integration tests pass, or can be run standalone.
 # ----------------------------------------------------
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 STAGING_DIR="/home/ubuntu/opt/staging"
-E2E_COMPOSE="docker-compose.e2e.yml"
+SCRIPTS_DIR="/home/ubuntu/opt/scripts"
+COMPOSE_CMD="docker compose -f compose.yaml -f compose.ci.yaml"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
 LOGFILE="$LOGDIR/e2e-$(date +'%Y%m%d-%H%M%S').log"
 
 mkdir -p "$LOGDIR"
 
 # ----------------------------------------------------
-# LOAD SERVICE URLs FROM .env FILES
-# The URLs are defined in the .env files inside each
-# service folder on the EC2 (billing/.env, weight/.env).
-# We source them so the script uses whatever is configured
-# there — no hardcoded URLs anywhere.
+# LOAD SERVICE URLs
+# URLs come from .env.webhook (loaded by systemd into
+# the webhook environment). No need to source service
+# .env files — those get overwritten by git reset.
 # ----------------------------------------------------
-[ -f "$STAGING_DIR/billing/.env" ] && . "$STAGING_DIR/billing/.env"
-BILLING_URL="${BILLING_URL_TEST:?BILLING_URL_TEST is not set in billing/.env}"
-WEIGHT_URL="${WEIGHT_URL_TEST:?WEIGHT_URL_TEST is not set in billing/.env}"
+BILLING_URL="${BILLING_URL_TEST:?BILLING_URL_TEST is not set — add it to .env.webhook}"
+WEIGHT_URL="${WEIGHT_URL_TEST:?WEIGHT_URL_TEST is not set — add it to .env.webhook}"
 
 log() {
     local msg="$1"
@@ -51,7 +50,7 @@ send_slack() {
 # ----------------------------------------------------
 cleanup() {
     log "[INFO] Trap triggered — tearing down e2e containers..."
-    cd "$STAGING_DIR" && docker compose -f "$E2E_COMPOSE" down -v --remove-orphans 2>/dev/null || true
+    cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
     log "[INFO] E2E cleanup complete"
 }
 trap cleanup EXIT
@@ -71,21 +70,34 @@ cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
 # ----------------------------------------------------
 # PRE-CREATE SHARED /in DIRECTORY
 # The e2e test writes Excel files here, and the billing
-# container reads them via a bind mount.
+# container reads them via a bind mount (compose.ci.yaml
+# mounts ./tests/e2e/in from $STAGING_DIR).
 # We create it before docker compose so it's owned by
 # the current user, not root.
 # ----------------------------------------------------
-mkdir -p tests/e2e/in
+mkdir -p "$STAGING_DIR/tests/e2e/in"
+
+# ----------------------------------------------------
+# TEAR DOWN ANY LEFTOVER CONTAINERS
+# Single-service tests or manual runs may have left
+# containers on conflicting ports (80, 8090). Kill
+# them before starting E2E.
+# ----------------------------------------------------
+log "[INFO] Cleaning up any leftover containers..."
+cd "$STAGING_DIR/weight" && docker compose -f docker-compose-dev.yaml down -v 2>/dev/null || true
+cd "$STAGING_DIR/billing" && docker compose -f docker-compose.yml down -v 2>/dev/null || true
+cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
 
 # ----------------------------------------------------
 # START ALL SERVICES
-# docker-compose.e2e.yml spins up:
+# compose.yaml + compose.ci.yaml spins up:
 #   - weight-db + weight-app (port 80)
 #   - billing-db + billing-app (port 8090)
-# All on the same Docker network so billing can call
-# weight internally via hostname.
+#   - frontend (port 8085)
+# All on the same Docker network so services can call
+# each other internally via hostname.
 # ----------------------------------------------------
-docker compose -f "$E2E_COMPOSE" up --build -d || fail "e2e compose up failed"
+$COMPOSE_CMD up --build -d || fail "e2e compose up failed"
 
 # ----------------------------------------------------
 # WAIT FOR SERVICES TO BE HEALTHY
@@ -111,14 +123,16 @@ log "[INFO] Billing service is healthy"
 
 # ----------------------------------------------------
 # RUN E2E PYTEST
-# Passes the service URLs as env vars so the test
-# knows where to send HTTP requests.
+# Tests live in the scripts dir, not the staging dir.
+# E2E_IN_DIR tells the test where to write Excel files
+# (must match compose.ci.yaml bind mount in $STAGING_DIR).
 # PIPESTATUS[0] captures pytest's exit code (not tee's).
 # ----------------------------------------------------
 log "[INFO] Running e2e tests..."
 BILLING_URL_TEST="$BILLING_URL" \
 WEIGHT_URL_TEST="$WEIGHT_URL" \
-python3 -m pytest tests/e2e/ -v --tb=short 2>&1 | tee -a "$LOGFILE"
+E2E_IN_DIR="$STAGING_DIR/tests/e2e/in" \
+python3 -m pytest "$SCRIPTS_DIR/tests/e2e/" -v --tb=short 2>&1 | tee -a "$LOGFILE"
 E2E_EXIT=${PIPESTATUS[0]}
 [ "$E2E_EXIT" -eq 0 ] || fail "E2E tests failed (exit code $E2E_EXIT)"
 
