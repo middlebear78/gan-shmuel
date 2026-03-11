@@ -125,6 +125,22 @@ log "[INFO] === Deployment started ==="
 cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
 
 # ----------------------------------------------------
+# PULL LATEST CODE FROM STAGING
+# The staging directory on EC2 may be stale if previous
+# deploys or manual work left it behind. We always pull
+# the latest code from origin/staging before building
+# so Docker gets the newest source files.
+#
+# chown is needed because Docker sometimes creates files
+# as root (__pycache__, .pyc) which block git reset.
+# ----------------------------------------------------
+log "[INFO] Pulling latest code from origin/staging..."
+git fetch origin || fail "git fetch failed"
+sudo chown -R ubuntu:ubuntu "$STAGING_DIR" 2>/dev/null || true
+git reset --hard origin/staging || fail "git reset to origin/staging failed"
+log "[INFO] Code updated to latest staging"
+
+# ----------------------------------------------------
 # BUILD AND START ALL SERVICES
 # compose.yaml + compose.prod.yaml spins up:
 #   - weight-db + weight-app (port 8080)
