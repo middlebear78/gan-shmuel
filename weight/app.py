@@ -297,7 +297,7 @@ def get_weight():
     for t in transactions:
         containers = t.containers.split(",") if t.containers else []
         result.append({
-            "id": t.id,
+            "id": t.session_id,
             "direction": t.direction,
             "truck": t.truck,
             "bruto": t.bruto,
