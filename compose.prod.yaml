@@ -5,9 +5,9 @@ services:
       - ./weight/.env
     environment:
       MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${WEIGHT_DB_PASSWORD}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${WEIGHT_DB_PASSWORD}"]
     volumes:
       - weight-db-data:/var/lib/mysql
     restart: always
@@ -25,7 +25,7 @@ services:
     env_file:
       - ./billing/.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BILLING_DB_PASSWORD}
     volumes:
       - billing-db-data:/var/lib/mysql
     restart: always

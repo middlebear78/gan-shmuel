@@ -182,27 +182,33 @@ DEPLOY_SUCCESS=true
 log "[SUCCESS] === Deployment complete — all services healthy ==="
 
 # ----------------------------------------------------
-# PUSH STAGING → MAIN
-# After a successful deploy, main must mirror production
-# exactly. This pushes staging to main so they stay in
-# sync. The code has already been:
+# CREATE PR: STAGING → MAIN
+# After a successful deploy, create a PR to sync main
+# with staging. Devops reviews and approves it. This
+# respects main's branch protection rules.
+# The code has already been:
 #   1. Tested by CI (unit + integration + e2e)
 #   2. Approved by devops on the PR
 #   3. Merged to staging
 #   4. Deployed and health-checked in production
-# So there's no reason to gate this again.
-#
-# IMPORTANT: main has branch protection enabled. The
-# GITHUB_TOKEN used on EC2 must be added to the bypass
-# list in GitHub repo settings (Settings → Rules →
-# Rulesets) so this push is allowed. Everyone else
-# still needs a PR + approval to push to main.
+# The PR won't trigger CI because the router ignores
+# PRs targeting main.
 # ----------------------------------------------------
-cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
-log "[INFO] Pushing staging → main..."
-git push origin staging:main || fail "Failed to push staging to main"
-log "[SUCCESS] main branch updated to match production"
+GITHUB_REPO="middlebear78/gan-shmuel"
+log "[INFO] Creating PR: staging → main..."
+PR_URL=$(curl -s -X POST \
+  -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/$GITHUB_REPO/pulls" \
+  -d '{"title":"Deploy: sync staging → main","head":"staging","base":"main","body":"Auto-created by deploy script after successful production deployment."}' \
+  | jq -r '.html_url // .message') || true
 
-send_slack "✅ Deployment complete — weight, billing, frontend all healthy. main branch updated."
+if [ "$PR_URL" != "null" ] && [ -n "$PR_URL" ]; then
+    log "[SUCCESS] PR created: $PR_URL"
+else
+    log "[WARN] Could not create PR (may already exist)"
+fi
+
+send_slack "✅ Deployment complete — all services healthy. PR created: staging → main"
 # send email notification on deploy success
 python3 "$SCRIPTS_DIR/send_email.py" --event deploy --status pass || true
