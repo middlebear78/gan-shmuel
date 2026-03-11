@@ -39,7 +39,7 @@ set -e
 # ----------------------------------------------------
 BARE_REPO="/home/ubuntu/opt/gan-shmuel.git"
 SCRIPTS_DIR="/home/ubuntu/opt/scripts"
-git --git-dir="$BARE_REPO" fetch 2>/dev/null || true
+git --git-dir="$BARE_REPO" fetch origin devops:devops 2>/dev/null || true
 git --git-dir="$BARE_REPO" archive devops -- devops/scripts/ 2>/dev/null \
   | tar -xf - --strip-components=2 -C "$SCRIPTS_DIR" 2>/dev/null || true
 chmod +x "$SCRIPTS_DIR"/*.sh 2>/dev/null || true

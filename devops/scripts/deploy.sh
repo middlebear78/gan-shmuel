@@ -134,6 +134,7 @@ cd "$PROD_DIR" || fail "Cannot cd to $PROD_DIR"
 # ----------------------------------------------------
 BARE_REPO="/home/ubuntu/opt/gan-shmuel.git"
 log "[INFO] Exporting latest staging code into $PROD_DIR..."
+git --git-dir="$BARE_REPO" fetch origin staging:staging 2>/dev/null || true
 sudo chown -R ubuntu:ubuntu "$PROD_DIR" 2>/dev/null || true
 git --git-dir="$BARE_REPO" archive staging | tar -xf - -C "$PROD_DIR" || fail "git archive export failed"
 # Restore .env for compose interpolation (DB passwords etc.)
