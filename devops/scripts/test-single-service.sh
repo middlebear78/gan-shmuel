@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ----------------------------------------------------
 # TEST SINGLE SERVICE — unit + integration tests
@@ -153,9 +152,16 @@ test_weight() {
     local COMPOSE_FILE="docker-compose-dev.yaml"
 
     cleanup() {
+        local exit_code=$?
         log "[INFO] Trap triggered — tearing down weight containers..."
         cd "$WORKDIR" && docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
         log "[INFO] Weight cleanup complete"
+        if [ "$exit_code" -ne 0 ]; then
+            log "[ERROR] weight tests exited with code $exit_code"
+            send_slack ":x: weight test failed (exit code $exit_code)"
+            send_email "fail" "weight tests exited with code $exit_code"
+            set_commit_status "failure" "weight tests failed"
+        fi
     }
     trap cleanup EXIT
 
@@ -177,7 +183,7 @@ test_weight() {
     log "[INFO] Waiting for weight app to respond on /health..."
     local w_app_healthy=false
     for i in {1..24}; do
-        if docker exec "$W_APP" curl -sf http://localhost:5000/health > /dev/null 2>&1; then
+        if docker exec "$W_APP" python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')" > /dev/null 2>&1; then
             w_app_healthy=true
             break
         fi
@@ -208,9 +214,16 @@ test_billing() {
     local COMPOSE_FILE="docker-compose.yml"
 
     cleanup() {
+        local exit_code=$?
         log "[INFO] Trap triggered — tearing down billing containers..."
         cd "$WORKDIR" && docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
         log "[INFO] Billing cleanup complete"
+        if [ "$exit_code" -ne 0 ]; then
+            log "[ERROR] billing tests exited with code $exit_code"
+            send_slack ":x: billing test failed (exit code $exit_code)"
+            send_email "fail" "billing tests exited with code $exit_code"
+            set_commit_status "failure" "billing tests failed"
+        fi
     }
     trap cleanup EXIT
 
@@ -226,13 +239,13 @@ test_billing() {
     check_health "$COMPOSE_FILE" "mysql" "billing mysql"
 
     local B_APP
-    B_APP="$(docker compose -f "$COMPOSE_FILE" ps -q app)"
+    B_APP="$(docker compose -f "$COMPOSE_FILE" ps -q billing-app)"
     [ -n "$B_APP" ] || fail "billing app container was not created"
 
     log "[INFO] Waiting for billing app to respond on /health..."
     local b_app_healthy=false
     for i in {1..24}; do
-        if docker exec "$B_APP" curl -sf http://localhost:5000/health > /dev/null 2>&1; then
+        if docker exec "$B_APP" python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')" > /dev/null 2>&1; then
             b_app_healthy=true
             break
         fi
