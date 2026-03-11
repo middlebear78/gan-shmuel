@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ----------------------------------------------------
 # ROUTER — the entry point for ALL GitHub webhook events.
