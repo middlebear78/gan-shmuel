@@ -5,9 +5,9 @@ set -e
 # TEST SINGLE SERVICE — unit + integration tests
 #
 # Generic script that tests ONE service in isolation.
-# Takes the service name as $1 (weight or billing).
-# Used by router.sh when a PR targets a service branch
-# (not staging).
+# Takes the service name as $1 (weight, billing, or
+# frontend). Used by router.sh when a PR targets a
+# service branch (not staging).
 #
 # weight:   compose up weight/docker-compose-dev.yaml,
 #           health check DB + app, docker exec pytest
@@ -17,11 +17,31 @@ set -e
 #           health check DB + app, docker exec pytest
 #           unit + integration, cleanup.
 #
+# frontend: docker build only — no tests exist.
+#           Just verifies the image builds successfully.
+#
 # Called by router.sh in the background (&) so the
 # webhook returns 200 to GitHub immediately.
 # ----------------------------------------------------
 
-SERVICE="${1:?Usage: test-single-service.sh <weight|billing>}"
+SERVICE="${1:?Usage: test-single-service.sh <weight|billing|frontend>}"
+
+# ----------------------------------------------------
+# PER-SERVICE EMAIL RECIPIENTS
+# Each team lead gets notified about their own service.
+# orangeteam.devops@gmail.com (devops) is CC'd on all.
+# ----------------------------------------------------
+case "$SERVICE" in
+    weight)
+        export EMAIL_TO="orangeteam.devops@gmail.com,michaelarie96@gmail.com"
+        ;;
+    billing)
+        export EMAIL_TO="orangeteam.devops@gmail.com,david.sh.sh2@gmail.com"
+        ;;
+    frontend)
+        export EMAIL_TO="orangeteam.devops@gmail.com,david.sh.sh2@gmail.com"
+        ;;
+esac
 
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 SCRIPTS_DIR="/home/ubuntu/opt/scripts"
@@ -232,6 +252,18 @@ test_billing() {
     log "[SUCCESS] Billing integration tests passed"
 }
 
+# ----------------------------------------------------
+# TEST FRONTEND
+# Frontend has no tests — just verify the Docker image
+# builds successfully. If the Dockerfile or requirements
+# are broken, this catches it.
+# ----------------------------------------------------
+test_frontend() {
+    log "[INFO] Building frontend image..."
+    docker build -t ci-frontend "$STAGING_DIR/frontend" || fail "Frontend build failed"
+    log "[SUCCESS] Frontend image built"
+}
+
 # ====================================================
 # MAIN — dispatch to the right test function
 # ====================================================
@@ -246,8 +278,11 @@ case "$SERVICE" in
     billing)
         test_billing
         ;;
+    frontend)
+        test_frontend
+        ;;
     *)
-        fail "Unknown service: $SERVICE (expected weight or billing)"
+        fail "Unknown service: $SERVICE (expected weight, billing, or frontend)"
         ;;
 esac
 

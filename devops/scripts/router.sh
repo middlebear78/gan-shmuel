@@ -67,6 +67,7 @@ printf '%s' "$PAYLOAD" > "$TMP"
 # commits to an existing PR. Routes based on the
 # target (base) branch:
 #   weight/billing → test-single-service.sh (unit+integration)
+#   frontend       → test-single-service.sh (build check only)
 #   staging        → test-weight-and-billing-and-frontend.sh
 #                    (E2E + frontend build)
 # The test script runs in the background (&) so the
@@ -101,6 +102,8 @@ if [ "$EVENT" = "pull_request" ]; then
     # Route based on which branch the PR targets:
     #   weight/billing  → test-single-service.sh (fast,
     #                     unit+integration for that service)
+    #   frontend        → test-single-service.sh (build
+    #                     check only — no tests exist)
     #   staging         → test-weight-and-billing-and-frontend.sh
     #                     (E2E + frontend build only — unit+
     #                     integration already passed on the
@@ -115,6 +118,11 @@ if [ "$EVENT" = "pull_request" ]; then
         billing)
             log "[INFO] PR targets billing — running billing unit+integration tests"
             /home/ubuntu/opt/scripts/test-single-service.sh billing &
+            ;;
+        frontend)
+            # Frontend has no tests — just verify the Docker image builds.
+            log "[INFO] PR targets frontend — running frontend build check"
+            /home/ubuntu/opt/scripts/test-single-service.sh frontend &
             ;;
         staging)
             log "[INFO] PR targets staging — running E2E + frontend build"

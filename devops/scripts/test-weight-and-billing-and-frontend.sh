@@ -18,6 +18,12 @@ set -e
 # webhook returns 200 to GitHub immediately.
 # ----------------------------------------------------
 
+# ----------------------------------------------------
+# STAGING EMAIL RECIPIENTS
+# Staging CI results go to devops + team lead.
+# ----------------------------------------------------
+export EMAIL_TO="orangeteam.devops@gmail.com,shaikelman@gmail.com"
+
 SLACK_URL="${SLACK_URL:?SLACK_URL is not set}"
 LOGDIR="/home/ubuntu/opt/scripts/.logs"
 LOGFILE="$LOGDIR/weight-and-billing-and-frontend.log"
