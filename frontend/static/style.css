@@ -127,10 +127,12 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background-image: url("one_tapuz.png");
+  /*
+  background-image: url('one_tapuz.png');
   background-repeat: no-repeat;
   background-position: bottom left;
   background-size: 350px auto;
+  */
 }
 
 .header {
