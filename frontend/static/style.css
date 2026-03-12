@@ -127,7 +127,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  /*
+/*   
   background-image: url('one_tapuz.png');
   background-repeat: no-repeat;
   background-position: bottom left;
