@@ -22,7 +22,7 @@ def _normalize_scope(scope_raw: str) -> str:
 
     provider_id = int(s)
 
-    if Provider.query.get(provider_id) is None:
+    if db.session.get(Provider, provider_id) is None:
         raise ValueError(f"Provider id in Scope does not exist: {provider_id}")
 
     return str(provider_id)
@@ -85,14 +85,17 @@ def _read_rates_excel(filename: str):
 
 
 @rates_bp.route("/rates", methods=["POST"])
-def post_rates():
+def post_rates(internal_filename=None):
     """
     file = excel filename that already exists in /in
     Reads Product, Rate, Scope from excel and updates Rates table.
     Also saves the latest uploaded file name for GET /rates.
     """
-    data = request.get_json(silent=True) or {}
-    filename = data.get("file") or request.form.get("file")
+    if internal_filename:
+        filename = internal_filename
+    else:
+        data = request.get_json(silent=True) or {}
+        filename = data.get("file") or request.form.get("file")
 
     if not filename:
         return jsonify({"error": "file is required (name of excel file in /in)"}), 400
@@ -104,7 +107,7 @@ def post_rates():
         updated = 0
 
         for row in rows:
-            existing = Rate.query.filter_by(
+            existing = db.session.query(Rate).filter_by(
                 product_id=row["product_id"],
                 scope=row["scope"]
             ).first()
@@ -123,7 +126,7 @@ def post_rates():
                 inserted += 1
 
         # save the latest uploaded file name
-        latest_file = RatesFile.query.first()
+        latest_file = db.session.query(RatesFile).first()
 
         if latest_file:
             latest_file.filename = safe_name
@@ -157,7 +160,7 @@ def get_rates():
     Returns the same excel file that was last uploaded using POST /rates
     """
     try:
-        latest_file = RatesFile.query.first()
+        latest_file = db.session.query(RatesFile).first()
 
         if latest_file is None:
             return jsonify({"error": "no rates file uploaded yet"}), 404
@@ -180,3 +183,45 @@ def get_rates():
 
     except Exception as e:
         return jsonify({"error": "server error", "details": str(e)}), 500
+
+
+@rates_bp.route("/upload", methods=["POST"])
+def upload_file():
+    """
+    Uploads an excel file, validates columns, saves it as rates.xlsx to /in (overwriting if exists),
+    and calls post_rates to update the Rates table.
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "no file provided"}), 400
+        
+    file = request.files["file"]
+    
+    if file.filename == "":
+        return jsonify({"error": "no file selected"}), 400
+        
+    if not file.filename.endswith(".xlsx"):
+        return jsonify({"error": "file must be of type .xlsx"}), 400
+        
+    try:
+        wb = load_workbook(file, data_only=True)
+        ws = wb.active
+        
+        header = []
+        for cell in ws[1]:
+            header.append(str(cell.value).strip() if cell.value is not None else "")
+            
+        required = ["Product", "Rate", "Scope"]
+        for col in required:
+            if col not in header:
+                return jsonify({"error": f"missing column '{col}' in excel"}), 400
+                
+    except Exception as e:
+        return jsonify({"error": "invalid excel file", "details": str(e)}), 400
+        
+    path = os.path.join(IN_DIR, "rates.xlsx")
+    os.makedirs(IN_DIR, exist_ok=True)
+    
+    file.seek(0)
+    file.save(path)
+    
+    return post_rates(internal_filename="rates.xlsx")
