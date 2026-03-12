@@ -646,7 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupItemLookup();
   setupBatchWeight();
   setupUnknownContainers();
-  setupTruckBill();
   setupRates();
   setupBill();
   setupProviders();
