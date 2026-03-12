@@ -443,12 +443,13 @@ function setupRates() {
   const uploadResult = document.getElementById('rates-upload-result');
 
   uploadBtn.addEventListener('click', async () => {
-    const filename = document.getElementById('rates-file-input').value.trim();
-    if (!filename) return;
+    const fileInput = document.getElementById('rates-file-input');
+    if (!fileInput.files || fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
     uploadResult.innerHTML = '';
     btnLoading(uploadBtn, true);
     try {
-      const data = await uploadRates(filename);
+      const data = await uploadRates(file);
       showToast(t('ratesUploaded'), 'success');
       uploadResult.innerHTML = descTable([
         [t('rows'), data.rows],
