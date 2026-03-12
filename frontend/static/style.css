@@ -509,6 +509,22 @@ body {
   color: var(--text-secondary);
   font-size: 13px;
 }
+.health-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.health-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.health-row .tag {
+  min-width: 100px;
+  text-align: center;
+  justify-content: center;
+}
 
 /* ── Animations & Keyframes ── */
 @keyframes fadeIn {
