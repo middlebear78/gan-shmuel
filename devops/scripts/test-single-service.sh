@@ -117,6 +117,38 @@ fail() {
     exit 1
 }
 
+# ----------------------------------------------------
+# CLEAN STAGING CODE
+# Removes code from staging directory but preserves
+# .env files (secrets). Deletes .env.example (tracked
+# in git). SAFETY: Only operates on STAGING_DIR.
+# ----------------------------------------------------
+clean_staging_code() {
+    # SAFETY CHECK: Only clean staging, NEVER production
+    if [[ "$STAGING_DIR" != "/home/ubuntu/opt/staging" ]]; then
+        log "[ERROR] STAGING_DIR is not /home/ubuntu/opt/staging — refusing to clean"
+        return 1
+    fi
+
+    log "[INFO] Cleaning staging code (preserving .env files)..."
+
+    # Backup all .env files EXCEPT .env.example
+    local TEMP_ENV
+    TEMP_ENV=$(mktemp -d)
+    find "$STAGING_DIR" -name '.env*' ! -name '.env.example' -exec cp --parents {} "$TEMP_ENV" \; 2>/dev/null || true
+
+    # Delete everything except .git
+    find "$STAGING_DIR" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+    # Restore .env files
+    if [ -d "$TEMP_ENV$STAGING_DIR" ]; then
+        cp -r "$TEMP_ENV$STAGING_DIR"/* "$STAGING_DIR/" 2>/dev/null || true
+    fi
+    rm -rf "$TEMP_ENV"
+
+    log "[INFO] Staging code cleaned"
+}
+
 check_health() {
     local compose_file="$1"
     local service_name="$2"
@@ -155,6 +187,8 @@ test_weight() {
         local exit_code=$?
         log "[INFO] Trap triggered — tearing down weight containers..."
         cd "$WORKDIR" && docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+        # Clean staging code (preserves .env files)
+        clean_staging_code
         log "[INFO] Weight cleanup complete"
         if [ "$exit_code" -ne 0 ]; then
             log "[ERROR] weight tests exited with code $exit_code"
@@ -223,6 +257,8 @@ test_billing() {
         local exit_code=$?
         log "[INFO] Trap triggered — tearing down billing containers..."
         cd "$WORKDIR" && docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+        # Clean staging code (preserves .env files)
+        clean_staging_code
         log "[INFO] Billing cleanup complete"
         if [ "$exit_code" -ne 0 ]; then
             log "[ERROR] billing tests exited with code $exit_code"

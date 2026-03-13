@@ -46,11 +46,37 @@ send_slack() {
 
 # ----------------------------------------------------
 # GUARANTEED CLEANUP (trap)
-# Tears down ALL e2e containers on exit, no matter what.
+# Tears down ALL e2e containers on exit AND removes code
+# from staging directory. Preserves .env files (secrets)
+# but deletes .env.example (tracked in git).
+# SAFETY: Only operates on STAGING_DIR, never production.
 # ----------------------------------------------------
 cleanup() {
     log "[INFO] Trap triggered — tearing down e2e containers..."
     cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
+
+    # SAFETY CHECK: Only clean staging, NEVER production
+    if [[ "$STAGING_DIR" != "/home/ubuntu/opt/staging" ]]; then
+        log "[ERROR] STAGING_DIR is not /home/ubuntu/opt/staging — refusing to clean"
+        return 1
+    fi
+
+    log "[INFO] Cleaning staging code (preserving .env files)..."
+
+    # Backup all .env files EXCEPT .env.example
+    local TEMP_ENV
+    TEMP_ENV=$(mktemp -d)
+    find "$STAGING_DIR" -name '.env*' ! -name '.env.example' -exec cp --parents {} "$TEMP_ENV" \; 2>/dev/null || true
+
+    # Delete everything except .git
+    find "$STAGING_DIR" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+    # Restore .env files
+    if [ -d "$TEMP_ENV$STAGING_DIR" ]; then
+        cp -r "$TEMP_ENV$STAGING_DIR"/* "$STAGING_DIR/" 2>/dev/null || true
+    fi
+    rm -rf "$TEMP_ENV"
+
     log "[INFO] E2E cleanup complete"
 }
 trap cleanup EXIT
@@ -87,6 +113,38 @@ log "[INFO] Cleaning up any leftover containers..."
 cd "$STAGING_DIR/weight" && docker compose -f docker-compose-dev.yaml down -v 2>/dev/null || true
 cd "$STAGING_DIR/billing" && docker compose -f docker-compose.yml down -v 2>/dev/null || true
 cd "$STAGING_DIR" && $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || true
+
+# ----------------------------------------------------
+# FETCH FRESH CODE FROM PR BRANCH
+# PR_BRANCH is exported by router.sh (e.g., "weight").
+# We fetch and checkout the entire repo from that branch
+# to ensure we test the actual code being merged, not
+# stale leftovers from previous test runs.
+# Preserves .env files (secrets) but overwrites code.
+# ----------------------------------------------------
+cd "$STAGING_DIR" || fail "Cannot cd to $STAGING_DIR"
+
+if [ -n "${PR_BRANCH:-}" ]; then
+    log "[INFO] Fetching fresh code from origin/$PR_BRANCH..."
+
+    # Backup .env files (except .env.example)
+    TEMP_ENV=$(mktemp -d)
+    find "$STAGING_DIR" -name '.env*' ! -name '.env.example' -exec cp --parents {} "$TEMP_ENV" \; 2>/dev/null || true
+
+    # Fetch and checkout fresh code
+    git fetch origin || fail "git fetch failed"
+    git checkout "origin/$PR_BRANCH" -- . || fail "git checkout origin/$PR_BRANCH failed"
+
+    # Restore .env files
+    if [ -d "$TEMP_ENV$STAGING_DIR" ]; then
+        cp -r "$TEMP_ENV$STAGING_DIR"/* "$STAGING_DIR/" 2>/dev/null || true
+    fi
+    rm -rf "$TEMP_ENV"
+
+    log "[INFO] Code updated from origin/$PR_BRANCH"
+else
+    log "[WARN] PR_BRANCH not set — using existing code in staging"
+fi
 
 # ----------------------------------------------------
 # START ALL SERVICES
